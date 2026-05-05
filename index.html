@@ -977,30 +977,50 @@ p { color: var(--text2); }
 // ============================================================
 
 const CONFIG = {
-  // Google Sheets API
-  // Get this from Google Cloud Console > APIs & Services > Credentials
+  // ─────────────────────────────────────────────────────────
+  // STEP 1: Paste your Google API Key here
+  //   → console.cloud.google.com → APIs & Services → Credentials → Create API Key
   GOOGLE_API_KEY: 'AIzaSyBn0-2J6yj9pig5kq7qEMZLGLykzYEEDGs',
 
-  // Your Google Sheet ID (from the URL of your Google Sheet)
-  // https://docs.google.com/spreadsheets/d/SHEET_ID_HERE/edit
+  // STEP 2: Paste your Google Sheet ID here
+  //   → Open your sheet → copy the ID from the URL between /d/ and /edit
   SHEET_ID: '1JiDj-AiZY-Ceiyk-VQoSqME0mkUZWrUimeL1Hvarj2E',
 
-  // Google Calendar ID (usually your Gmail address or calendar-specific ID)
+  // STEP 3: Your Google Calendar ID (usually just your Gmail address)
   CALENDAR_ID: 'sumit4ubmas@gmail.com',
 
-  // OAuth 2.0 Client ID (for write access to Sheets and Calendar)
+  // STEP 4: OAuth 2.0 Client ID (needed to write data back to the sheet)
+  //   → console.cloud.google.com → Credentials → Create OAuth 2.0 Client ID
   GOOGLE_CLIENT_ID: '369294975276-odsa23fipsede0notjqp49daq7881amk.apps.googleusercontent.com',
 
-  // Admin PIN for parent/admin mode (change this!)
+  // STEP 5: Change this PIN! Used to unlock Parent/Admin mode.
   ADMIN_PIN: '6058',
 
-  // App settings
-  AUTO_REFRESH_INTERVAL: 3 * 60 * 1000, // 3 minutes in milliseconds
+  // App settings — no need to change these
+  AUTO_REFRESH_INTERVAL: 3 * 60 * 1000,
   TIMEZONE: Intl.DateTimeFormat().resolvedOptions().timeZone,
 
-  // Demo/offline mode — set to true to use sample data without Google API
+  // DEMO_MODE: Set to false once you have filled in the credentials above.
+  // When true (or when credentials are placeholders), the app uses built-in sample data.
   DEMO_MODE: false,
 };
+
+// ── Auto-detect unconfigured credentials ──────────────────
+// If any credential is still a placeholder, force demo mode so the
+// app never makes real API calls with invalid keys (which causes 403/404 errors).
+(function() {
+  const placeholders = ['YOUR_GOOGLE_API_KEY', 'YOUR_GOOGLE_SHEET_ID', 'YOUR_CALENDAR_ID_OR_EMAIL', 'YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com'];
+  const hasPlaceholder =
+    placeholders.includes(CONFIG.GOOGLE_API_KEY) ||
+    placeholders.includes(CONFIG.SHEET_ID);
+  if (hasPlaceholder && !CONFIG.DEMO_MODE) {
+    console.warn('Home Hub: Credentials not configured — running in Demo Mode. Fill in config values and set DEMO_MODE: false to connect to Google Sheets.');
+    CONFIG.DEMO_MODE = true;
+  }
+  if (CONFIG.DEMO_MODE) {
+    console.info('Home Hub: Running in Demo Mode with sample data. See the CONFIG section in the HTML to connect to Google Sheets.');
+  }
+})();
 
 // ============================================================
 // Home Hub — Sample Demo Data
@@ -1170,6 +1190,14 @@ function tomorrowAt(time) {
 const SheetsAPI = (() => {
   const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 
+  function isConfigured() {
+    return !CONFIG.DEMO_MODE &&
+      CONFIG.SHEET_ID &&
+      CONFIG.SHEET_ID !== 'YOUR_GOOGLE_SHEET_ID' &&
+      CONFIG.GOOGLE_API_KEY &&
+      CONFIG.GOOGLE_API_KEY !== 'YOUR_GOOGLE_API_KEY';
+  }
+
   // Range definitions
   const RANGES = {
     users:    'Users!A2:F',
@@ -1251,19 +1279,19 @@ const SheetsAPI = (() => {
   // ── Public API ──────────────────────────────────────────
 
   async function getUsers() {
-    if (CONFIG.DEMO_MODE) return DEMO_DATA.users;
+    if (!isConfigured()) return DEMO_DATA.users;
     const rows = await fetchRange(RANGES.users);
     return rows.map(r => rowToObj(COLS.users, r));
   }
 
   async function getTasks() {
-    if (CONFIG.DEMO_MODE) return [...DEMO_DATA.tasks];
+    if (!isConfigured()) return [...DEMO_DATA.tasks];
     const rows = await fetchRange(RANGES.tasks);
     return rows.map(r => rowToObj(COLS.tasks, r));
   }
 
   async function addTask(task) {
-    if (CONFIG.DEMO_MODE) {
+    if (!isConfigured()) {
       task.task_id = 't' + Date.now();
       task.created_at = new Date().toISOString();
       DEMO_DATA.tasks.push(task);
@@ -1277,7 +1305,7 @@ const SheetsAPI = (() => {
   }
 
   async function updateTask(task) {
-    if (CONFIG.DEMO_MODE) {
+    if (!isConfigured()) {
       const idx = DEMO_DATA.tasks.findIndex(t => t.task_id === task.task_id);
       if (idx !== -1) DEMO_DATA.tasks[idx] = { ...DEMO_DATA.tasks[idx], ...task };
       return task;
@@ -1293,7 +1321,7 @@ const SheetsAPI = (() => {
   }
 
   async function deleteTask(task_id) {
-    if (CONFIG.DEMO_MODE) {
+    if (!isConfigured()) {
       const idx = DEMO_DATA.tasks.findIndex(t => t.task_id === task_id);
       if (idx !== -1) DEMO_DATA.tasks.splice(idx, 1);
       return;
@@ -1307,7 +1335,7 @@ const SheetsAPI = (() => {
   }
 
   async function completeTask(task_id) {
-    if (CONFIG.DEMO_MODE) {
+    if (!isConfigured()) {
       const task = DEMO_DATA.tasks.find(t => t.task_id === task_id);
       if (task) {
         task.status = 'completed';
@@ -1344,7 +1372,7 @@ const SheetsAPI = (() => {
   }
 
   async function reopenTask(task_id) {
-    if (CONFIG.DEMO_MODE) {
+    if (!isConfigured()) {
       const task = DEMO_DATA.tasks.find(t => t.task_id === task_id);
       if (task) { task.status = 'pending'; task.completed_at = null; }
       return task;
@@ -1359,19 +1387,19 @@ const SheetsAPI = (() => {
   }
 
   async function getRoutines() {
-    if (CONFIG.DEMO_MODE) return DEMO_DATA.routines;
+    if (!isConfigured()) return DEMO_DATA.routines;
     const rows = await fetchRange(RANGES.routines);
     return rows.map(r => rowToObj(COLS.routines, r));
   }
 
   async function getRewards() {
-    if (CONFIG.DEMO_MODE) return DEMO_DATA.rewards;
+    if (!isConfigured()) return DEMO_DATA.rewards;
     const rows = await fetchRange(RANGES.rewards);
     return rows.map(r => rowToObj(COLS.rewards, r));
   }
 
   async function getSettings() {
-    if (CONFIG.DEMO_MODE) return DEMO_DATA.settings;
+    if (!isConfigured()) return DEMO_DATA.settings;
     const rows = await fetchRange(RANGES.settings);
     const s = {};
     rows.forEach(r => { if (r[0]) s[r[0]] = r[1]; });
@@ -1387,8 +1415,16 @@ const SheetsAPI = (() => {
 
 const CalendarAPI = (() => {
 
+  function isConfigured() {
+    return !CONFIG.DEMO_MODE &&
+      CONFIG.CALENDAR_ID &&
+      CONFIG.CALENDAR_ID !== 'YOUR_CALENDAR_ID_OR_EMAIL' &&
+      CONFIG.GOOGLE_API_KEY &&
+      CONFIG.GOOGLE_API_KEY !== 'YOUR_GOOGLE_API_KEY';
+  }
+
   async function getEventsForRange(startISO, endISO) {
-    if (CONFIG.DEMO_MODE) {
+    if (!isConfigured()) {
       const start = new Date(startISO);
       const end = new Date(endISO);
       return DEMO_DATA.calendarEvents.filter(e => {
@@ -1431,7 +1467,7 @@ const CalendarAPI = (() => {
   }
 
   async function addEvent(event) {
-    if (CONFIG.DEMO_MODE) {
+    if (!isConfigured()) {
       const newEvent = { ...event, id: 'e' + Date.now() };
       DEMO_DATA.calendarEvents.push(newEvent);
       return newEvent;
@@ -2627,26 +2663,28 @@ function App() {
   // ── Load Data ────────────────────────────────────────────
   useEffect(() => {
     async function loadAll() {
-      try {
-        const [u, t, r, rw, ev, s] = await Promise.all([
-          SheetsAPI.getUsers(),
-          SheetsAPI.getTasks(),
-          SheetsAPI.getRoutines(),
-          SheetsAPI.getRewards(),
-          CalendarAPI.getTodayEvents(),
-          SheetsAPI.getSettings(),
-        ]);
-        setUsers(u);
-        setTasks(t);
-        setRoutines(r);
-        setRewards(rw);
-        setCalendarEvents(ev);
-        setSettings(s);
-      } catch (err) {
-        console.error('Load error:', err);
-      } finally {
-        setLoading(false);
-      }
+      // Each API call has its own fallback so one failure never blocks the whole app.
+      const safeGet = async (fn, fallback, label) => {
+        try { return await fn(); }
+        catch(err) { console.warn(`Home Hub: ${label} failed, using fallback.`, err.message); return fallback; }
+      };
+
+      const [u, t, r, rw, ev, s] = await Promise.all([
+        safeGet(() => SheetsAPI.getUsers(),        DEMO_DATA.users,          'getUsers'),
+        safeGet(() => SheetsAPI.getTasks(),        DEMO_DATA.tasks,          'getTasks'),
+        safeGet(() => SheetsAPI.getRoutines(),     DEMO_DATA.routines,       'getRoutines'),
+        safeGet(() => SheetsAPI.getRewards(),      DEMO_DATA.rewards,        'getRewards'),
+        safeGet(() => CalendarAPI.getTodayEvents(),DEMO_DATA.calendarEvents, 'getCalendarEvents'),
+        safeGet(() => SheetsAPI.getSettings(),     DEMO_DATA.settings,       'getSettings'),
+      ]);
+
+      setUsers(u);
+      setTasks(t);
+      setRoutines(r);
+      setRewards(rw);
+      setCalendarEvents(ev);
+      setSettings(s);
+      setLoading(false);
     }
     loadAll();
 
