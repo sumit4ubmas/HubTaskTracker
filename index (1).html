@@ -1,0 +1,2954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home Hub – Family Task Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fraunces:ital,wght@0,700;0,900;1,700&display=swap" rel="stylesheet" />
+  <style>
+/* ============================================================
+   Home Hub Task Tracker — Styles
+   Nunito + Fraunces | Warm family-friendly design
+   ============================================================ */
+
+:root {
+  --bg: #F7F5F2;
+  --bg2: #EFEDE8;
+  --surface: #FFFFFF;
+  --surface2: #F9F7F4;
+  --border: #E5E0D8;
+  --text: #1A1614;
+  --text2: #5C534A;
+  --text3: #9C8F84;
+  --accent: #E8521A;
+  --accent2: #F0854A;
+  --accent-bg: #FFF0EA;
+  --success: #2D9B6A;
+  --success-bg: #E8F7F1;
+  --warning: #D97706;
+  --warning-bg: #FEF3C7;
+  --danger: #DC2626;
+  --danger-bg: #FEE2E2;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.07);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.10);
+  --nav-h: 72px;
+  --font: 'Nunito', sans-serif;
+  --font-display: 'Fraunces', serif;
+
+  /* Member colors */
+  --mom: #7C3AED;
+  --dad: #2563EB;
+  --ava: #DB2777;
+  --leo: #059669;
+}
+
+[data-theme="dark"] {
+  --bg: #1A1614;
+  --bg2: #221E1B;
+  --surface: #2A2420;
+  --surface2: #332E2A;
+  --border: #3A3330;
+  --text: #F7F5F2;
+  --text2: #C9BFB5;
+  --text3: #7A6F66;
+  --accent-bg: #3A2518;
+  --success-bg: #0F2E20;
+  --warning-bg: #2C1F06;
+  --danger-bg: #2C0A0A;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.5;
+}
+
+#confetti-canvas {
+  position: fixed; inset: 0; z-index: 9999;
+  pointer-events: none; display: none;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+/* ── Typography ── */
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.2; }
+h1 { font-size: clamp(1.6rem, 4vw, 2.4rem); }
+h2 { font-size: clamp(1.2rem, 3vw, 1.6rem); }
+h3 { font-size: 1.1rem; }
+p { color: var(--text2); }
+
+/* ── Layout ── */
+.app-container {
+  display: flex; flex-direction: column;
+  min-height: 100vh;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.main-content {
+  flex: 1;
+  padding: 0 16px 100px;
+  overflow-y: auto;
+}
+
+/* ── Top Bar ── */
+.top-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+  gap: 12px;
+}
+
+.top-bar-brand {
+  display: flex; align-items: center; gap: 10px;
+}
+
+.brand-icon {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+
+.brand-name {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.4rem;
+  color: var(--accent);
+}
+
+.top-bar-center {
+  display: flex; flex-direction: column; align-items: center;
+  flex: 1;
+}
+
+.top-date {
+  font-size: 0.9rem; color: var(--text3);
+  font-weight: 600;
+}
+
+.top-time {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.top-bar-actions {
+  display: flex; align-items: center; gap: 8px;
+}
+
+.icon-btn {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--surface2);
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.icon-btn:hover { background: var(--border); color: var(--text); }
+
+/* ── Bottom Navigation ── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-top: 2px solid var(--border);
+  display: flex;
+  z-index: 100;
+  height: var(--nav-h);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  border: none; background: none;
+  color: var(--text3);
+  font-family: var(--font);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 8px 4px;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.nav-item .nav-icon { font-size: 22px; line-height: 1; }
+
+.nav-item.active {
+  color: var(--accent);
+}
+
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%; transform: translateX(-50%);
+  width: 32px; height: 3px;
+  background: var(--accent);
+  border-radius: 0 0 4px 4px;
+}
+
+.nav-item:hover { color: var(--text); background: var(--surface2); }
+
+/* ── Cards ── */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.card-sm {
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  padding: 14px 16px;
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
+
+.btn-secondary {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+}
+.btn-secondary:hover { background: var(--border); }
+
+.btn-success {
+  background: var(--success);
+  color: #fff;
+}
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn-lg {
+  padding: 18px 28px;
+  font-size: 1.1rem;
+  border-radius: var(--radius);
+  min-height: 56px;
+}
+
+.btn-xl {
+  padding: 22px 36px;
+  font-size: 1.3rem;
+  border-radius: 20px;
+  min-height: 72px;
+}
+
+.btn-icon {
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--surface2);
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.15s;
+}
+.btn-icon:hover { background: var(--border); }
+
+/* ── Tags & Badges ── */
+.tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.tag-high { background: var(--danger-bg); color: var(--danger); }
+.tag-medium { background: var(--warning-bg); color: var(--warning); }
+.tag-low { background: var(--success-bg); color: var(--success); }
+.tag-pending { background: var(--warning-bg); color: var(--warning); }
+.tag-completed { background: var(--success-bg); color: var(--success); }
+.tag-overdue { background: var(--danger-bg); color: var(--danger); }
+
+.badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px;
+  padding: 0 6px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+/* ── Section Headers ── */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 28px 0 14px;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* ── Task Cards ── */
+.task-card {
+  display: flex; align-items: flex-start; gap: 14px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  padding: 16px;
+  transition: all 0.15s;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.task-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+}
+
+.task-card:hover { box-shadow: var(--shadow-md); border-color: var(--accent); transform: translateY(-1px); }
+
+.task-card.completed { opacity: 0.6; }
+.task-card.completed .task-title { text-decoration: line-through; }
+
+.task-check {
+  width: 28px; height: 28px; min-width: 28px;
+  border-radius: 50%;
+  border: 2.5px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  transition: all 0.15s;
+  margin-top: 2px;
+}
+
+.task-check.checked {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+
+.task-check:hover:not(.checked) { border-color: var(--success); background: var(--success-bg); }
+
+.task-body { flex: 1; min-width: 0; }
+.task-title { font-weight: 700; font-size: 1rem; color: var(--text); margin-bottom: 4px; }
+.task-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text3); }
+.task-assignee { display: flex; align-items: center; gap: 4px; font-weight: 600; }
+.task-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+
+/* ── Kid Mode Task Cards ── */
+.kid-task-card {
+  background: var(--surface);
+  border-radius: 24px;
+  border: 2.5px solid var(--border);
+  padding: 24px;
+  text-align: center;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.kid-task-card.completed {
+  border-color: var(--success);
+  background: var(--success-bg);
+}
+
+.kid-task-icon { font-size: 3.5rem; margin-bottom: 12px; }
+.kid-task-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.kid-task-time {
+  font-size: 0.95rem;
+  color: var(--text3);
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.kid-task-points {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--warning-bg);
+  color: var(--warning);
+  padding: 6px 14px;
+  border-radius: 99px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  margin-bottom: 18px;
+}
+.kid-done-btn {
+  width: 100%;
+  padding: 18px;
+  border-radius: 16px;
+  border: none;
+  background: linear-gradient(135deg, var(--success), #38D399);
+  color: #fff;
+  font-family: var(--font);
+  font-size: 1.2rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 4px 12px rgba(45,155,106,0.3);
+}
+.kid-done-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(45,155,106,0.4); }
+.kid-done-btn:active { transform: translateY(0); }
+.kid-done-btn.done {
+  background: linear-gradient(135deg, #ccc, #bbb);
+  box-shadow: none;
+}
+
+/* ── Member Avatar ── */
+.member-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  border: 2.5px solid currentColor;
+  flex-shrink: 0;
+}
+
+.member-avatar-sm {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  border: 2px solid currentColor;
+  flex-shrink: 0;
+}
+
+/* ── Calendar Event Cards ── */
+.event-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  margin-bottom: 8px;
+}
+
+.event-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.event-time { font-size: 0.8rem; font-weight: 700; color: var(--text3); min-width: 80px; }
+.event-title { font-weight: 700; font-size: 0.95rem; flex: 1; }
+
+/* ── Home Dashboard ── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+}
+
+.stat-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  padding: 20px;
+  text-align: center;
+}
+
+.stat-number {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-label { font-size: 0.85rem; font-weight: 600; color: var(--text3); }
+
+/* ── Family Progress Bar ── */
+.progress-bar-wrap {
+  background: var(--bg2);
+  border-radius: 99px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.5s ease;
+}
+
+/* ── Forms ── */
+.form-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 480px) {
+  .form-row { grid-template-columns: 1fr; }
+}
+
+.form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.form-label { font-size: 0.85rem; font-weight: 700; color: var(--text2); }
+
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  transition: border-color 0.15s;
+  outline: none;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--accent);
+}
+
+.form-textarea { resize: vertical; min-height: 80px; }
+.form-select { cursor: pointer; }
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  z-index: 500;
+  display: flex; align-items: flex-end;
+  animation: fadeIn 0.2s;
+}
+
+@media (min-width: 640px) {
+  .modal-overlay { align-items: center; }
+}
+
+.modal {
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  padding: 28px 24px 36px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.25s ease;
+}
+
+@media (min-width: 640px) {
+  .modal {
+    max-width: 560px;
+    margin: 0 auto;
+    border-radius: 24px;
+    animation: scaleIn 0.2s ease;
+  }
+}
+
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.modal-title { font-family: var(--font-display); font-size: 1.4rem; }
+.modal-close {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface2);
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-close:hover { background: var(--border); }
+
+/* ── PIN Screen ── */
+.pin-screen {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  z-index: 600;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 24px;
+  padding: 32px;
+}
+
+.pin-title { font-family: var(--font-display); font-size: 2rem; text-align: center; }
+.pin-dots { display: flex; gap: 14px; }
+.pin-dot {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2.5px solid var(--border);
+  background: var(--surface);
+  transition: all 0.15s;
+}
+.pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+
+.pin-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  max-width: 280px; width: 100%;
+}
+
+.pin-key {
+  aspect-ratio: 1;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  background: var(--surface);
+  font-family: var(--font);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.1s;
+  display: flex; align-items: center; justify-content: center;
+}
+.pin-key:hover { background: var(--surface2); transform: scale(1.05); }
+.pin-key:active { transform: scale(0.95); }
+
+/* ── User Select ── */
+.user-select-screen {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  z-index: 600;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 32px;
+  padding: 32px;
+}
+
+.user-grid {
+  display: flex; flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  max-width: 600px;
+}
+
+.user-card {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 12px;
+  padding: 24px 20px;
+  min-width: 130px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.user-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+
+.user-card-avatar {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+  border: 3px solid currentColor;
+}
+
+.user-card-name { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; }
+.user-card-role { font-size: 0.8rem; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ── Tabs (Tasks view filters) ── */
+.tab-bar {
+  display: flex; gap: 6px; overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 20px;
+  scrollbar-width: none;
+}
+.tab-bar::-webkit-scrollbar { display: none; }
+
+.tab-pill {
+  padding: 8px 16px;
+  border-radius: 99px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.tab-pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.tab-pill:hover:not(.active) { border-color: var(--text3); color: var(--text); }
+
+/* ── Rewards ── */
+.points-display {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, #F6C026, #F5A623);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 99px;
+  font-weight: 800;
+  font-size: 1rem;
+  box-shadow: 0 2px 8px rgba(246,192,38,0.4);
+}
+
+/* ── Routines ── */
+.routine-section {
+  margin-bottom: 28px;
+}
+
+.routine-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  background: var(--bg2);
+  border-radius: var(--radius-sm);
+}
+
+.routine-icon { font-size: 1.4rem; }
+.routine-name { font-family: var(--font-display); font-size: 1rem; font-weight: 700; }
+
+/* ── Animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); } to { transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); }
+}
+@keyframes bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+@keyframes checkPop {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-slide-in { animation: slideIn 0.3s ease; }
+.animate-check-pop { animation: checkPop 0.3s ease; }
+.animate-bounce { animation: bounce 0.3s ease; }
+
+/* ── Weather Widget ── */
+.weather-widget {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #74B9FF, #0984E3);
+  border-radius: var(--radius);
+  color: #fff;
+  margin-bottom: 20px;
+}
+
+.weather-temp { font-family: var(--font-display); font-size: 2rem; font-weight: 900; }
+.weather-desc { font-size: 0.85rem; opacity: 0.9; }
+
+/* ── Family Score Banner ── */
+.family-score-banner {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  color: #fff;
+  margin-bottom: 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.family-score-label { font-size: 0.85rem; opacity: 0.9; margin-bottom: 4px; }
+.family-score-number { font-family: var(--font-display); font-size: 2.2rem; font-weight: 900; }
+
+/* ── Success Toast ── */
+.toast {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+  background: var(--success);
+  color: #fff;
+  padding: 14px 24px;
+  border-radius: var(--radius);
+  font-weight: 700;
+  font-size: 0.95rem;
+  z-index: 400;
+  animation: slideUp 0.2s ease;
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+}
+
+/* ── Kid Mode Overrides ── */
+.kid-mode .main-content { background: var(--bg); }
+.kid-mode .top-bar { background: linear-gradient(135deg, #FF6B6B, #FF922B); }
+.kid-mode .brand-name { color: #fff; }
+
+.kid-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 480px) {
+  .kid-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Overdue Alert ── */
+.overdue-banner {
+  background: var(--danger-bg);
+  border: 1.5px solid var(--danger);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 12px;
+  color: var(--danger);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* ── Settings ── */
+.settings-group {
+  margin-bottom: 28px;
+}
+.settings-group-title {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  margin-bottom: 10px;
+}
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  margin-bottom: 6px;
+}
+.settings-row-label { font-weight: 700; font-size: 0.95rem; }
+.settings-row-value { font-size: 0.85rem; color: var(--text3); }
+
+/* Toggle */
+.toggle {
+  width: 44px; height: 24px;
+  background: var(--border);
+  border-radius: 99px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  border: none;
+}
+.toggle.on { background: var(--success); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  top: 3px; left: 3px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.toggle.on::after { transform: translateX(20px); }
+
+/* ── Responsive Tweaks ── */
+@media (max-width: 360px) {
+  .top-time { font-size: 1.2rem; }
+  .task-card { padding: 12px; }
+  .kid-task-card { padding: 18px; }
+}
+
+@media (min-width: 768px) {
+  .main-content { padding: 0 28px 100px; }
+  .kid-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ── Streak Badge ── */
+.streak-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: linear-gradient(135deg, #FF922B, #FF6348);
+  color: #fff;
+  padding: 5px 12px;
+  border-radius: 99px;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+/* ── Empty States ── */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text3);
+}
+.empty-state-icon { font-size: 3rem; margin-bottom: 12px; }
+.empty-state-text { font-weight: 600; font-size: 0.95rem; }
+
+/* ── Floating Add Button ── */
+.fab {
+  position: fixed;
+  bottom: calc(var(--nav-h) + 16px);
+  right: 20px;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 20px rgba(232,82,26,0.45);
+  z-index: 200;
+  transition: all 0.15s;
+}
+.fab:hover { transform: scale(1.1) translateY(-2px); }
+.fab:active { transform: scale(0.95); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <canvas id="confetti-canvas"></canvas>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+  <script>
+// ============================================================
+// Home Hub Task Tracker — Configuration
+// ============================================================
+// INSTRUCTIONS:
+// 1. Replace the values below with your actual credentials
+// 2. See SETUP.md for full instructions on getting these values
+// ============================================================
+
+const CONFIG = {
+  // Google Sheets API
+  // Get this from Google Cloud Console > APIs & Services > Credentials
+  GOOGLE_API_KEY: 'AIzaSyBn0-2J6yj9pig5kq7qEMZLGLykzYEEDGs',
+
+  // Your Google Sheet ID (from the URL of your Google Sheet)
+  // https://docs.google.com/spreadsheets/d/SHEET_ID_HERE/edit
+  SHEET_ID: '1JiDj-AiZY-Ceiyk-VQoSqME0mkUZWrUimeL1Hvarj2E',
+
+  // Google Calendar ID (usually your Gmail address or calendar-specific ID)
+  CALENDAR_ID: 'sumit4ubmas@gmail.com',
+
+  // OAuth 2.0 Client ID (for write access to Sheets and Calendar)
+  GOOGLE_CLIENT_ID: '369294975276-odsa23fipsede0notjqp49daq7881amk.apps.googleusercontent.com',
+
+  // Admin PIN for parent/admin mode (change this!)
+  ADMIN_PIN: '6058',
+
+  // App settings
+  AUTO_REFRESH_INTERVAL: 3 * 60 * 1000, // 3 minutes in milliseconds
+  TIMEZONE: Intl.DateTimeFormat().resolvedOptions().timeZone,
+
+  // Demo/offline mode — set to true to use sample data without Google API
+  DEMO_MODE: false,
+};
+
+// ============================================================
+// Home Hub — Sample Demo Data
+// ============================================================
+
+const DEMO_DATA = {
+  users: [
+    { user_id: 'u1', name: 'Mom', role: 'parent', color: '#7C3AED', avatar: '👩', active: true },
+    { user_id: 'u2', name: 'Dad', role: 'parent', color: '#2563EB', avatar: '👨', active: true },
+    { user_id: 'u3', name: 'Ava', role: 'child', color: '#DB2777', avatar: '👧', active: true },
+    { user_id: 'u4', name: 'Leo', role: 'child', color: '#059669', avatar: '👦', active: true },
+  ],
+
+  tasks: [
+    {
+      task_id: 't1', title: 'Brush Teeth', description: 'Morning brush for 2 minutes',
+      assigned_to: 'u3', category: 'Personal', priority: 'High',
+      due_date: todayStr(), due_time: '07:30', recurrence: 'Daily',
+      status: 'pending', reward_points: 5, created_by: 'u1',
+      created_at: '2025-01-01T00:00:00Z', completed_at: null
+    },
+    {
+      task_id: 't2', title: 'Make Bed', description: 'Tidy up your bed nicely',
+      assigned_to: 'u3', category: 'Chore', priority: 'Medium',
+      due_date: todayStr(), due_time: '08:00', recurrence: 'Daily',
+      status: 'completed', reward_points: 10, created_by: 'u1',
+      created_at: '2025-01-01T00:00:00Z', completed_at: new Date().toISOString()
+    },
+    {
+      task_id: 't3', title: 'Pack School Bag', description: 'Check homework and pack everything',
+      assigned_to: 'u3', category: 'School', priority: 'High',
+      due_date: todayStr(), due_time: '08:15', recurrence: 'Weekdays',
+      status: 'pending', reward_points: 10, created_by: 'u1',
+      created_at: '2025-01-01T00:00:00Z', completed_at: null
+    },
+    {
+      task_id: 't4', title: 'Finish Homework', description: 'Complete all school assignments',
+      assigned_to: 'u3', category: 'School', priority: 'High',
+      due_date: todayStr(), due_time: '16:00', recurrence: 'Weekdays',
+      status: 'pending', reward_points: 15, created_by: 'u1',
+      created_at: '2025-01-01T00:00:00Z', completed_at: null
+    },
+    {
+      task_id: 't5', title: 'Clean Room', description: 'Tidy up your bedroom',
+      assigned_to: 'u4', category: 'Chore', priority: 'Medium',
+      due_date: todayStr(), due_time: '17:00', recurrence: 'Weekly',
+      status: 'pending', reward_points: 20, created_by: 'u1',
+      created_at: '2025-01-01T00:00:00Z', completed_at: null
+    },
+    {
+      task_id: 't6', title: 'Take Out Trash', description: 'Empty all trash bins',
+      assigned_to: 'u4', category: 'Chore', priority: 'Medium',
+      due_date: todayStr(), due_time: '18:00', recurrence: 'Weekly',
+      status: 'pending', reward_points: 15, created_by: 'u2',
+      created_at: '2025-01-01T00:00:00Z', completed_at: null
+    },
+    {
+      task_id: 't7', title: 'Feed the Dog', description: 'Morning and evening feeding',
+      assigned_to: 'u4', category: 'Chore', priority: 'High',
+      due_date: todayStr(), due_time: '07:00', recurrence: 'Daily',
+      status: 'completed', reward_points: 10, created_by: 'u1',
+      created_at: '2025-01-01T00:00:00Z', completed_at: new Date().toISOString()
+    },
+    {
+      task_id: 't8', title: 'Buy Groceries', description: 'Weekly grocery run',
+      assigned_to: 'u1', category: 'Errand', priority: 'High',
+      due_date: todayStr(), due_time: '11:00', recurrence: 'Weekly',
+      status: 'pending', reward_points: 0, created_by: 'u1',
+      created_at: '2025-01-01T00:00:00Z', completed_at: null
+    },
+    {
+      task_id: 't9', title: 'Pay Electric Bill', description: 'Online payment due',
+      assigned_to: 'u2', category: 'Home', priority: 'High',
+      due_date: yesterdayStr(), due_time: '23:59', recurrence: 'Monthly',
+      status: 'pending', reward_points: 0, created_by: 'u2',
+      created_at: '2025-01-01T00:00:00Z', completed_at: null
+    },
+    {
+      task_id: 't10', title: 'Family Reading Time', description: '30 minutes reading together',
+      assigned_to: 'u1', category: 'Personal', priority: 'Low',
+      due_date: todayStr(), due_time: '20:00', recurrence: 'Daily',
+      status: 'pending', reward_points: 5, created_by: 'u1',
+      created_at: '2025-01-01T00:00:00Z', completed_at: null
+    },
+    {
+      task_id: 't11', title: 'Brush Teeth', description: 'Bedtime brush',
+      assigned_to: 'u4', category: 'Personal', priority: 'High',
+      due_date: todayStr(), due_time: '21:00', recurrence: 'Daily',
+      status: 'pending', reward_points: 5, created_by: 'u1',
+      created_at: '2025-01-01T00:00:00Z', completed_at: null
+    },
+    {
+      task_id: 't12', title: 'Water the Plants', description: 'Living room and balcony plants',
+      assigned_to: 'u2', category: 'Home', priority: 'Low',
+      due_date: tomorrowStr(), due_time: '09:00', recurrence: 'Weekly',
+      status: 'pending', reward_points: 0, created_by: 'u1',
+      created_at: '2025-01-01T00:00:00Z', completed_at: null
+    },
+  ],
+
+  routines: [
+    { routine_id: 'r1', routine_name: 'Morning Routine', assigned_to: 'u3', task_title: 'Brush Teeth', day_of_week: 'Daily', time: '07:30', active: true },
+    { routine_id: 'r2', routine_name: 'Morning Routine', assigned_to: 'u3', task_title: 'Make Bed', day_of_week: 'Daily', time: '08:00', active: true },
+    { routine_id: 'r3', routine_name: 'Morning Routine', assigned_to: 'u3', task_title: 'Pack School Bag', day_of_week: 'Weekdays', time: '08:15', active: true },
+    { routine_id: 'r4', routine_name: 'After School', assigned_to: 'u3', task_title: 'Finish Homework', day_of_week: 'Weekdays', time: '16:00', active: true },
+    { routine_id: 'r5', routine_name: 'Evening Routine', assigned_to: 'u4', task_title: 'Feed the Dog', day_of_week: 'Daily', time: '18:00', active: true },
+    { routine_id: 'r6', routine_name: 'Bedtime Routine', assigned_to: 'u3', task_title: 'Brush Teeth', day_of_week: 'Daily', time: '21:00', active: true },
+    { routine_id: 'r7', routine_name: 'Bedtime Routine', assigned_to: 'u4', task_title: 'Brush Teeth', day_of_week: 'Daily', time: '21:00', active: true },
+  ],
+
+  rewards: [
+    { reward_id: 'rw1', user_id: 'u3', points: 10, reason: 'Make Bed', date: todayStr() },
+    { reward_id: 'rw2', user_id: 'u4', points: 10, reason: 'Feed the Dog', date: todayStr() },
+    { reward_id: 'rw3', user_id: 'u3', points: 15, reason: 'Finished Homework', date: yesterdayStr() },
+    { reward_id: 'rw4', user_id: 'u4', points: 20, reason: 'Clean Room', date: yesterdayStr() },
+    { reward_id: 'rw5', user_id: 'u3', points: 5, reason: 'Brush Teeth', date: yesterdayStr() },
+  ],
+
+  calendarEvents: [
+    { id: 'e1', title: 'School Drop-off', start: todayAt('08:30'), end: todayAt('09:00'), assignedTo: 'u2', color: '#2563EB' },
+    { id: 'e2', title: "Ava's Soccer Practice", start: todayAt('15:30'), end: todayAt('17:00'), assignedTo: 'u3', color: '#DB2777' },
+    { id: 'e3', title: 'Dinner Together', start: todayAt('18:30'), end: todayAt('19:30'), assignedTo: null, color: '#7C3AED' },
+    { id: 'e4', title: "Leo's Dentist Appointment", start: tomorrowAt('10:00'), end: tomorrowAt('11:00'), assignedTo: 'u4', color: '#059669' },
+  ],
+
+  settings: {
+    family_name: 'The Johnson Family',
+    theme: 'light',
+    show_weather: true,
+    weather_location: 'New York, NY',
+    weekly_goal_points: 100,
+  }
+};
+
+// Helper date functions
+function todayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+function yesterdayStr() {
+  const d = new Date(); d.setDate(d.getDate() - 1);
+  return d.toISOString().split('T')[0];
+}
+function tomorrowStr() {
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  return d.toISOString().split('T')[0];
+}
+function todayAt(time) {
+  const [h, m] = time.split(':');
+  const d = new Date();
+  d.setHours(parseInt(h), parseInt(m), 0, 0);
+  return d.toISOString();
+}
+function tomorrowAt(time) {
+  const [h, m] = time.split(':');
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  d.setHours(parseInt(h), parseInt(m), 0, 0);
+  return d.toISOString();
+}
+
+// ============================================================
+// Home Hub — Google Sheets API Layer
+// ============================================================
+// Handles all read/write operations with Google Sheets.
+// Falls back to DEMO_DATA when CONFIG.DEMO_MODE = true
+// ============================================================
+
+const SheetsAPI = (() => {
+  const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+
+  // Range definitions
+  const RANGES = {
+    users:    'Users!A2:F',
+    tasks:    'Tasks!A2:N',
+    routines: 'Routines!A2:H',
+    rewards:  'Rewards!A2:E',
+    settings: 'Settings!A2:B',
+  };
+
+  // Column maps (0-indexed)
+  const COLS = {
+    users:    ['user_id','name','role','color','avatar','active'],
+    tasks:    ['task_id','title','description','assigned_to','category','priority','due_date','due_time','recurrence','status','reward_points','created_by','created_at','completed_at'],
+    routines: ['routine_id','routine_name','assigned_to','task_title','day_of_week','time','active'],
+    rewards:  ['reward_id','user_id','points','reason','date'],
+  };
+
+  function rowToObj(cols, row) {
+    const obj = {};
+    cols.forEach((col, i) => { obj[col] = row[i] ?? ''; });
+    // Parse booleans
+    if ('active' in obj) obj.active = obj.active === 'TRUE' || obj.active === true;
+    if ('reward_points' in obj) obj.reward_points = parseInt(obj.reward_points) || 0;
+    if ('points' in obj) obj.points = parseInt(obj.points) || 0;
+    return obj;
+  }
+
+  function objToRow(cols, obj) {
+    return cols.map(col => {
+      const v = obj[col];
+      if (v === undefined || v === null) return '';
+      if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+      return String(v);
+    });
+  }
+
+  async function fetchRange(range) {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}?key=${CONFIG.GOOGLE_API_KEY}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Sheets API error: ${res.status}`);
+    const data = await res.json();
+    return data.values || [];
+  }
+
+  async function updateRange(range, values) {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}?valueInputOption=RAW`;
+    const token = await getAccessToken();
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ range, majorDimension: 'ROWS', values })
+    });
+    if (!res.ok) throw new Error(`Sheets write error: ${res.status}`);
+    return res.json();
+  }
+
+  async function appendRow(range, values) {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
+    const token = await getAccessToken();
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ range, majorDimension: 'ROWS', values: [values] })
+    });
+    if (!res.ok) throw new Error(`Sheets append error: ${res.status}`);
+    return res.json();
+  }
+
+  async function getAccessToken() {
+    return new Promise((resolve, reject) => {
+      if (!window.gapi?.auth2) { reject(new Error('OAuth not initialized')); return; }
+      const auth = gapi.auth2.getAuthInstance();
+      const user = auth.currentUser.get();
+      const token = user.getAuthResponse().access_token;
+      resolve(token);
+    });
+  }
+
+  // ── Public API ──────────────────────────────────────────
+
+  async function getUsers() {
+    if (CONFIG.DEMO_MODE) return DEMO_DATA.users;
+    const rows = await fetchRange(RANGES.users);
+    return rows.map(r => rowToObj(COLS.users, r));
+  }
+
+  async function getTasks() {
+    if (CONFIG.DEMO_MODE) return [...DEMO_DATA.tasks];
+    const rows = await fetchRange(RANGES.tasks);
+    return rows.map(r => rowToObj(COLS.tasks, r));
+  }
+
+  async function addTask(task) {
+    if (CONFIG.DEMO_MODE) {
+      task.task_id = 't' + Date.now();
+      task.created_at = new Date().toISOString();
+      DEMO_DATA.tasks.push(task);
+      return task;
+    }
+    task.task_id = 't' + Date.now();
+    task.created_at = new Date().toISOString();
+    const row = objToRow(COLS.tasks, task);
+    await appendRow(RANGES.tasks, row);
+    return task;
+  }
+
+  async function updateTask(task) {
+    if (CONFIG.DEMO_MODE) {
+      const idx = DEMO_DATA.tasks.findIndex(t => t.task_id === task.task_id);
+      if (idx !== -1) DEMO_DATA.tasks[idx] = { ...DEMO_DATA.tasks[idx], ...task };
+      return task;
+    }
+    // Find row index in sheet and update it
+    const rows = await fetchRange(RANGES.tasks);
+    const idx = rows.findIndex(r => r[0] === task.task_id);
+    if (idx === -1) throw new Error('Task not found');
+    const row = objToRow(COLS.tasks, task);
+    const range = `Tasks!A${idx + 2}:N${idx + 2}`;
+    await updateRange(range, [row]);
+    return task;
+  }
+
+  async function deleteTask(task_id) {
+    if (CONFIG.DEMO_MODE) {
+      const idx = DEMO_DATA.tasks.findIndex(t => t.task_id === task_id);
+      if (idx !== -1) DEMO_DATA.tasks.splice(idx, 1);
+      return;
+    }
+    // Mark deleted by clearing row (full delete requires Sheets batchUpdate)
+    const rows = await fetchRange(RANGES.tasks);
+    const idx = rows.findIndex(r => r[0] === task_id);
+    if (idx === -1) return;
+    const range = `Tasks!A${idx + 2}:N${idx + 2}`;
+    await updateRange(range, [Array(14).fill('')]);
+  }
+
+  async function completeTask(task_id) {
+    if (CONFIG.DEMO_MODE) {
+      const task = DEMO_DATA.tasks.find(t => t.task_id === task_id);
+      if (task) {
+        task.status = 'completed';
+        task.completed_at = new Date().toISOString();
+        // Add reward
+        if (task.reward_points > 0) {
+          DEMO_DATA.rewards.push({
+            reward_id: 'rw' + Date.now(),
+            user_id: task.assigned_to,
+            points: task.reward_points,
+            reason: task.title,
+            date: todayStr()
+          });
+        }
+      }
+      return task;
+    }
+    const tasks = await getTasks();
+    const task = tasks.find(t => t.task_id === task_id);
+    if (!task) throw new Error('Task not found');
+    task.status = 'completed';
+    task.completed_at = new Date().toISOString();
+    await updateTask(task);
+    if (task.reward_points > 0) {
+      await appendRow(RANGES.rewards, objToRow(COLS.rewards, {
+        reward_id: 'rw' + Date.now(),
+        user_id: task.assigned_to,
+        points: task.reward_points,
+        reason: task.title,
+        date: todayStr()
+      }));
+    }
+    return task;
+  }
+
+  async function reopenTask(task_id) {
+    if (CONFIG.DEMO_MODE) {
+      const task = DEMO_DATA.tasks.find(t => t.task_id === task_id);
+      if (task) { task.status = 'pending'; task.completed_at = null; }
+      return task;
+    }
+    const tasks = await getTasks();
+    const task = tasks.find(t => t.task_id === task_id);
+    if (!task) throw new Error('Task not found');
+    task.status = 'pending';
+    task.completed_at = '';
+    await updateTask(task);
+    return task;
+  }
+
+  async function getRoutines() {
+    if (CONFIG.DEMO_MODE) return DEMO_DATA.routines;
+    const rows = await fetchRange(RANGES.routines);
+    return rows.map(r => rowToObj(COLS.routines, r));
+  }
+
+  async function getRewards() {
+    if (CONFIG.DEMO_MODE) return DEMO_DATA.rewards;
+    const rows = await fetchRange(RANGES.rewards);
+    return rows.map(r => rowToObj(COLS.rewards, r));
+  }
+
+  async function getSettings() {
+    if (CONFIG.DEMO_MODE) return DEMO_DATA.settings;
+    const rows = await fetchRange(RANGES.settings);
+    const s = {};
+    rows.forEach(r => { if (r[0]) s[r[0]] = r[1]; });
+    return s;
+  }
+
+  return { getUsers, getTasks, addTask, updateTask, deleteTask, completeTask, reopenTask, getRoutines, getRewards, getSettings };
+})();
+
+// ============================================================
+// Home Hub — Google Calendar API Layer
+// ============================================================
+
+const CalendarAPI = (() => {
+
+  async function getEventsForRange(startISO, endISO) {
+    if (CONFIG.DEMO_MODE) {
+      const start = new Date(startISO);
+      const end = new Date(endISO);
+      return DEMO_DATA.calendarEvents.filter(e => {
+        const es = new Date(e.start);
+        return es >= start && es <= end;
+      });
+    }
+    const params = new URLSearchParams({
+      key: CONFIG.GOOGLE_API_KEY,
+      timeMin: startISO,
+      timeMax: endISO,
+      singleEvents: 'true',
+      orderBy: 'startTime',
+    });
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CONFIG.CALENDAR_ID)}/events?${params}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Calendar API error: ${res.status}`);
+    const data = await res.json();
+    return (data.items || []).map(item => ({
+      id: item.id,
+      title: item.summary,
+      start: item.start.dateTime || item.start.date,
+      end: item.end.dateTime || item.end.date,
+      description: item.description || '',
+      color: item.colorId ? colorIdToHex(item.colorId) : '#7C3AED',
+      assignedTo: null,
+    }));
+  }
+
+  async function getTodayEvents() {
+    const start = new Date(); start.setHours(0,0,0,0);
+    const end = new Date(); end.setHours(23,59,59,999);
+    return getEventsForRange(start.toISOString(), end.toISOString());
+  }
+
+  async function getWeekEvents() {
+    const start = new Date(); start.setHours(0,0,0,0);
+    const end = new Date(start); end.setDate(end.getDate() + 7);
+    return getEventsForRange(start.toISOString(), end.toISOString());
+  }
+
+  async function addEvent(event) {
+    if (CONFIG.DEMO_MODE) {
+      const newEvent = { ...event, id: 'e' + Date.now() };
+      DEMO_DATA.calendarEvents.push(newEvent);
+      return newEvent;
+    }
+    const token = await getAccessToken();
+    const body = {
+      summary: event.title,
+      description: event.description || '',
+      start: { dateTime: event.start, timeZone: CONFIG.TIMEZONE },
+      end: { dateTime: event.end, timeZone: CONFIG.TIMEZONE },
+      colorId: event.colorId || '1',
+      reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 30 }] },
+    };
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CONFIG.CALENDAR_ID)}/events`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error(`Calendar add event error: ${res.status}`);
+    return res.json();
+  }
+
+  function colorIdToHex(id) {
+    const map = { '1':'#7986cb','2':'#33b679','3':'#8e24aa','4':'#e67c73','5':'#f6c026','6':'#f5511d','7':'#039be5','8':'#616161','9':'#3f51b5','10':'#0b8043','11':'#d50000' };
+    return map[id] || '#7C3AED';
+  }
+
+  async function getAccessToken() {
+    return new Promise((resolve, reject) => {
+      if (!window.gapi?.auth2) { reject(new Error('OAuth not initialized')); return; }
+      const user = gapi.auth2.getAuthInstance().currentUser.get();
+      resolve(user.getAuthResponse().access_token);
+    });
+  }
+
+  return { getTodayEvents, getWeekEvents, addEvent };
+})();
+
+// ============================================================
+// Home Hub — Confetti Animation
+// ============================================================
+
+const Confetti = (() => {
+  let animFrame = null;
+  let particles = [];
+
+  function launch() {
+    const canvas = document.getElementById('confetti-canvas');
+    if (!canvas) return;
+    canvas.style.display = 'block';
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d');
+
+    const colors = ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF922B','#CC5DE8','#F06595','#74C0FC'];
+    particles = Array.from({ length: 120 }, () => ({
+      x: Math.random() * canvas.width,
+      y: -10 - Math.random() * 40,
+      r: 6 + Math.random() * 8,
+      d: 2 + Math.random() * 3,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      tilt: Math.floor(Math.random() * 10) - 10,
+      tiltAngle: 0,
+      tiltAngleIncrement: 0.07 + Math.random() * 0.05,
+      angle: Math.random() * Math.PI * 2,
+      angleIncrement: 0.04 + Math.random() * 0.02,
+    }));
+
+    let elapsed = 0;
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.fillStyle = p.color;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.tilt);
+        if (Math.random() > 0.5) {
+          ctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r);
+        } else {
+          ctx.arc(0, 0, p.r / 2, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+        ctx.restore();
+
+        p.tiltAngle += p.tiltAngleIncrement;
+        p.angle += p.angleIncrement;
+        p.y += (Math.cos(p.angle) + p.d);
+        p.x += Math.sin(p.angle) * 1.5;
+        p.tilt = Math.sin(p.tiltAngle) * 12;
+      });
+
+      elapsed++;
+      if (elapsed < 120) {
+        animFrame = requestAnimationFrame(draw);
+      } else {
+        canvas.style.display = 'none';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    if (animFrame) cancelAnimationFrame(animFrame);
+    draw();
+  }
+
+  return { launch };
+})();
+  </script>
+
+  <script type="text/babel" data-presets="react">
+// ============================================================
+// Home Hub Task Tracker — Main React App
+// ============================================================
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
+
+// ── Utility Functions ─────────────────────────────────────
+
+function formatTime(isoOrTime) {
+  if (!isoOrTime) return '';
+  try {
+    const d = isoOrTime.includes('T') ? new Date(isoOrTime) : new Date(`2000-01-01T${isoOrTime}`);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch { return isoOrTime; }
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function isToday(dateStr) {
+  if (!dateStr) return false;
+  return dateStr === new Date().toISOString().split('T')[0];
+}
+
+function isOverdue(task) {
+  if (task.status === 'completed') return false;
+  const today = new Date().toISOString().split('T')[0];
+  if (task.due_date < today) return true;
+  if (task.due_date === today && task.due_time) {
+    const now = new Date();
+    const [h, m] = task.due_time.split(':').map(Number);
+    const due = new Date(); due.setHours(h, m, 0, 0);
+    return now > due;
+  }
+  return false;
+}
+
+function getCategoryIcon(cat) {
+  const map = { Chore:'🧹', School:'📚', Personal:'🌟', Home:'🏠', Errand:'🛒', Other:'📌' };
+  return map[cat] || '📌';
+}
+
+function getTaskIcon(title) {
+  const t = title.toLowerCase();
+  if (t.includes('brush') || t.includes('teeth')) return '🪥';
+  if (t.includes('bed')) return '🛏️';
+  if (t.includes('school') || t.includes('bag') || t.includes('pack')) return '🎒';
+  if (t.includes('homework')) return '📝';
+  if (t.includes('clean') || t.includes('room')) return '🧹';
+  if (t.includes('trash')) return '🗑️';
+  if (t.includes('feed') || t.includes('pet') || t.includes('dog') || t.includes('cat')) return '🐾';
+  if (t.includes('read')) return '📖';
+  if (t.includes('grocery') || t.includes('groceries') || t.includes('shop')) return '🛒';
+  if (t.includes('water') || t.includes('plant')) return '🪴';
+  if (t.includes('dinner') || t.includes('lunch') || t.includes('eat')) return '🍽️';
+  if (t.includes('bill') || t.includes('pay')) return '💳';
+  if (t.includes('exercise') || t.includes('workout')) return '💪';
+  if (t.includes('sleep') || t.includes('bed') || t.includes('bedtime')) return '😴';
+  return getCategoryIcon('Other');
+}
+
+function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 5); }
+
+// ── Shared Components ─────────────────────────────────────
+
+function MemberAvatar({ user, size = 'md' }) {
+  if (!user) return null;
+  const cls = size === 'sm' ? 'member-avatar-sm' : 'member-avatar';
+  return (
+    <div className={cls} style={{ color: user.color, borderColor: user.color, backgroundColor: user.color + '20' }}>
+      {user.avatar}
+    </div>
+  );
+}
+
+function TaskCheckbox({ checked, onClick, color }) {
+  return (
+    <div
+      className={`task-check ${checked ? 'checked' : ''}`}
+      style={checked ? { background: color || 'var(--success)', borderColor: color || 'var(--success)' } : {}}
+      onClick={e => { e.stopPropagation(); onClick(); }}
+    >
+      {checked && <span className="animate-check-pop">✓</span>}
+    </div>
+  );
+}
+
+function PriorityTag({ priority }) {
+  const cls = `tag tag-${priority?.toLowerCase()}`;
+  const dots = priority === 'High' ? '●●●' : priority === 'Medium' ? '●●○' : '●○○';
+  return <span className={cls}>{dots} {priority}</span>;
+}
+
+function StatusTag({ status }) {
+  return <span className={`tag tag-${status}`}>{status === 'completed' ? '✓ Done' : status === 'pending' ? '⏳ Pending' : status}</span>;
+}
+
+function Toast({ message, onDone }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 2500);
+    return () => clearTimeout(t);
+  }, []);
+  return <div className="toast">✅ {message}</div>;
+}
+
+function EmptyState({ icon, text }) {
+  return (
+    <div className="empty-state">
+      <div className="empty-state-icon">{icon}</div>
+      <div className="empty-state-text">{text}</div>
+    </div>
+  );
+}
+
+// ── Task Form Modal ───────────────────────────────────────
+
+function TaskFormModal({ users, editTask, onSave, onClose }) {
+  const defaultForm = {
+    title: '', description: '', assigned_to: users[0]?.user_id || '',
+    category: 'Chore', priority: 'Medium', due_date: new Date().toISOString().split('T')[0],
+    due_time: '', recurrence: 'None', reward_points: 10, status: 'pending'
+  };
+  const [form, setForm] = useState(editTask ? { ...editTask } : defaultForm);
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  function handleSubmit() {
+    if (!form.title.trim()) return;
+    onSave({ ...form, reward_points: parseInt(form.reward_points) || 0 });
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2 className="modal-title">{editTask ? '✏️ Edit Task' : '➕ New Task'}</h2>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Task Title *</label>
+          <input className="form-input" placeholder="e.g. Brush Teeth" value={form.title}
+            onChange={e => set('title', e.target.value)} />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Description</label>
+          <textarea className="form-textarea" placeholder="Optional details..." value={form.description}
+            onChange={e => set('description', e.target.value)} rows={2} />
+        </div>
+
+        <div className="form-row">
+          <div className="form-group" style={{marginBottom:0}}>
+            <label className="form-label">Assigned To</label>
+            <select className="form-select" value={form.assigned_to} onChange={e => set('assigned_to', e.target.value)}>
+              {users.map(u => <option key={u.user_id} value={u.user_id}>{u.avatar} {u.name}</option>)}
+            </select>
+          </div>
+          <div className="form-group" style={{marginBottom:0}}>
+            <label className="form-label">Category</label>
+            <select className="form-select" value={form.category} onChange={e => set('category', e.target.value)}>
+              {['Chore','School','Personal','Home','Errand','Other'].map(c => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group" style={{marginBottom:0}}>
+            <label className="form-label">Priority</label>
+            <select className="form-select" value={form.priority} onChange={e => set('priority', e.target.value)}>
+              {['High','Medium','Low'].map(p => <option key={p}>{p}</option>)}
+            </select>
+          </div>
+          <div className="form-group" style={{marginBottom:0}}>
+            <label className="form-label">Recurrence</label>
+            <select className="form-select" value={form.recurrence} onChange={e => set('recurrence', e.target.value)}>
+              {['None','Daily','Weekdays','Weekly','Monthly'].map(r => <option key={r}>{r}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="form-row" style={{marginTop:'16px'}}>
+          <div className="form-group" style={{marginBottom:0}}>
+            <label className="form-label">Due Date</label>
+            <input type="date" className="form-input" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
+          </div>
+          <div className="form-group" style={{marginBottom:0}}>
+            <label className="form-label">Due Time</label>
+            <input type="time" className="form-input" value={form.due_time} onChange={e => set('due_time', e.target.value)} />
+          </div>
+        </div>
+
+        <div className="form-group" style={{marginTop:'16px'}}>
+          <label className="form-label">⭐ Reward Points</label>
+          <input type="number" className="form-input" min="0" max="100" value={form.reward_points}
+            onChange={e => set('reward_points', e.target.value)} />
+        </div>
+
+        <div style={{display:'flex', gap:'12px', marginTop:'8px'}}>
+          <button className="btn btn-secondary" style={{flex:1}} onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" style={{flex:2}} onClick={handleSubmit}>
+            {editTask ? '💾 Save Changes' : '✅ Add Task'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PIN Screen ────────────────────────────────────────────
+
+function PinScreen({ onSuccess, onCancel }) {
+  const [pin, setPin] = useState('');
+  const [shake, setShake] = useState(false);
+
+  function pressKey(k) {
+    if (pin.length >= 4) return;
+    const next = pin + k;
+    setPin(next);
+    if (next.length === 4) {
+      setTimeout(() => {
+        if (next === CONFIG.ADMIN_PIN) {
+          onSuccess();
+        } else {
+          setShake(true);
+          setTimeout(() => { setPin(''); setShake(false); }, 500);
+        }
+      }, 150);
+    }
+  }
+
+  function backspace() { setPin(p => p.slice(0, -1)); }
+
+  return (
+    <div className="pin-screen">
+      <div className="brand-icon" style={{width:56,height:56,fontSize:28}}>🏠</div>
+      <h2 className="pin-title">Parent Mode</h2>
+      <p style={{color:'var(--text3)', textAlign:'center'}}>Enter your 4-digit PIN</p>
+
+      <div className="pin-dots" style={shake ? {animation:'bounce 0.3s ease'} : {}}>
+        {[0,1,2,3].map(i => (
+          <div key={i} className={`pin-dot ${i < pin.length ? 'filled' : ''}`} />
+        ))}
+      </div>
+
+      <div className="pin-grid">
+        {[1,2,3,4,5,6,7,8,9].map(n => (
+          <button key={n} className="pin-key" onClick={() => pressKey(String(n))}>{n}</button>
+        ))}
+        <button className="pin-key" onClick={onCancel} style={{fontSize:'1rem', color:'var(--text3)'}}>✕</button>
+        <button className="pin-key" onClick={() => pressKey('0')}>0</button>
+        <button className="pin-key" onClick={backspace} style={{fontSize:'1rem'}}>⌫</button>
+      </div>
+    </div>
+  );
+}
+
+// ── User Select Screen ─────────────────────────────────────
+
+function UserSelectScreen({ users, onSelect }) {
+  return (
+    <div className="user-select-screen">
+      <div className="brand-icon" style={{width:64,height:64,fontSize:32}}>🏠</div>
+      <h1 style={{fontFamily:'var(--font-display)', textAlign:'center'}}>Home Hub</h1>
+      <p style={{color:'var(--text3)', textAlign:'center', fontWeight:600}}>Who's using Home Hub?</p>
+
+      <div className="user-grid">
+        {users.map(user => (
+          <div key={user.user_id} className="user-card" onClick={() => onSelect(user)}
+            style={{ borderColor: user.color + '40' }}>
+            <div className="user-card-avatar" style={{ color: user.color, borderColor: user.color, backgroundColor: user.color + '20' }}>
+              {user.avatar}
+            </div>
+            <div className="user-card-name">{user.name}</div>
+            <div className="user-card-role">{user.role}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+// ============================================================
+// Home Hub — Views
+// ============================================================
+
+// ── Home View ─────────────────────────────────────────────
+
+function HomeView({ tasks, users, calendarEvents, rewards, settings, currentUser, onCompleteTask, onAddTask }) {
+  const today = new Date().toISOString().split('T')[0];
+
+  const todayTasks = tasks.filter(t => t.due_date === today);
+  const overdueTasks = tasks.filter(t => isOverdue(t));
+  const upcomingTasks = tasks.filter(t => t.due_date > today && t.status !== 'completed').slice(0, 5);
+  const todayCompleted = todayTasks.filter(t => t.status === 'completed').length;
+  const todayTotal = todayTasks.length;
+
+  const totalPoints = rewards.reduce((s, r) => s + (r.points || 0), 0);
+
+  const getUser = id => users.find(u => u.user_id === id);
+
+  const todayEvents = calendarEvents.filter(e => {
+    const d = new Date(e.start).toISOString().split('T')[0];
+    return d === today;
+  }).sort((a, b) => new Date(a.start) - new Date(b.start));
+
+  // Family member progress
+  const memberStats = users.map(u => {
+    const uTasks = tasks.filter(t => t.assigned_to === u.user_id && t.due_date === today);
+    const done = uTasks.filter(t => t.status === 'completed').length;
+    return { ...u, total: uTasks.length, done };
+  });
+
+  const familyProgress = todayTotal > 0 ? Math.round((todayCompleted / todayTotal) * 100) : 0;
+
+  return (
+    <div className="animate-slide-in">
+      {/* Family Score Banner */}
+      <div className="family-score-banner" style={{marginTop:20}}>
+        <div>
+          <div className="family-score-label">🏆 Family Score Today</div>
+          <div className="family-score-number">{totalPoints} pts</div>
+          <div style={{fontSize:'0.8rem', opacity:0.9, marginTop:4}}>
+            {todayCompleted}/{todayTotal} tasks done · {familyProgress}% complete
+          </div>
+        </div>
+        <div>
+          <div style={{width:80, height:80, position:'relative'}}>
+            <svg viewBox="0 0 80 80" style={{transform:'rotate(-90deg)'}}>
+              <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="8"/>
+              <circle cx="40" cy="40" r="34" fill="none" stroke="#fff" strokeWidth="8"
+                strokeDasharray={`${2 * Math.PI * 34 * familyProgress / 100} ${2 * Math.PI * 34}`}
+                strokeLinecap="round" />
+            </svg>
+            <div style={{position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--font-display)', fontSize:'1.2rem', fontWeight:900, color:'#fff'}}>
+              {familyProgress}%
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Overdue Alert */}
+      {overdueTasks.length > 0 && (
+        <div className="overdue-banner">
+          ⚠️ {overdueTasks.length} overdue task{overdueTasks.length > 1 ? 's' : ''}
+        </div>
+      )}
+
+      {/* Today's Events */}
+      {todayEvents.length > 0 && (
+        <>
+          <div className="section-header">
+            <span className="section-title">📅 Today's Schedule</span>
+          </div>
+          {todayEvents.map(ev => {
+            const assignedUser = ev.assignedTo ? getUser(ev.assignedTo) : null;
+            return (
+              <div key={ev.id} className="event-card">
+                <div className="event-dot" style={{background: ev.color || '#7C3AED'}} />
+                <div className="event-time">{formatTime(ev.start)}</div>
+                <div className="event-title">{ev.title}</div>
+                {assignedUser && <MemberAvatar user={assignedUser} size="sm" />}
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      {/* Family Progress */}
+      <div className="section-header">
+        <span className="section-title">👨‍👩‍👧‍👦 Family Progress</span>
+      </div>
+      <div className="card" style={{marginBottom:16}}>
+        {memberStats.map(u => (
+          <div key={u.user_id} style={{display:'flex', alignItems:'center', gap:12, marginBottom:u === memberStats[memberStats.length-1] ? 0 : 14}}>
+            <MemberAvatar user={u} />
+            <div style={{flex:1}}>
+              <div style={{display:'flex', justifyContent:'space-between', marginBottom:5}}>
+                <span style={{fontWeight:700, fontSize:'0.9rem'}}>{u.name}</span>
+                <span style={{fontSize:'0.8rem', color:'var(--text3)', fontWeight:600}}>{u.done}/{u.total}</span>
+              </div>
+              <div className="progress-bar-wrap">
+                <div className="progress-bar-fill" style={{
+                  width: u.total > 0 ? `${Math.round(u.done/u.total*100)}%` : '0%',
+                  background: u.color
+                }} />
+              </div>
+            </div>
+            <div className="points-display" style={{fontSize:'0.8rem', padding:'4px 10px'}}>
+              ⭐ {rewards.filter(r => r.user_id === u.user_id).reduce((s,r) => s + r.points, 0)}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Today's Tasks */}
+      <div className="section-header">
+        <span className="section-title">📋 Today's Tasks</span>
+        <button className="btn btn-primary" style={{padding:'8px 14px', fontSize:'0.85rem'}} onClick={onAddTask}>
+          + Add
+        </button>
+      </div>
+
+      {overdueTasks.map(task => {
+        const user = getUser(task.assigned_to);
+        return (
+          <div key={task.task_id} className="task-card" style={{'--accent-left': '#DC2626'}}>
+            <div style={{position:'absolute', left:0, top:0, bottom:0, width:4, background:'#DC2626', borderRadius:'16px 0 0 16px'}} />
+            <TaskCheckbox checked={false} onClick={() => onCompleteTask(task.task_id)} />
+            <div className="task-body">
+              <div className="task-title">{task.title}</div>
+              <div className="task-meta">
+                <span style={{color:'#DC2626', fontWeight:700}}>⚠️ Overdue</span>
+                {user && <span className="task-assignee" style={{color: user.color}}>{user.avatar} {user.name}</span>}
+                {task.due_time && <span>🕐 {formatTime(task.due_time)}</span>}
+                <PriorityTag priority={task.priority} />
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {todayTasks.filter(t => t.status !== 'completed' && !isOverdue(t)).map(task => {
+        const user = getUser(task.assigned_to);
+        return (
+          <div key={task.task_id} className="task-card">
+            <div style={{position:'absolute', left:0, top:0, bottom:0, width:4, background: user?.color || 'var(--accent)', borderRadius:'16px 0 0 16px'}} />
+            <TaskCheckbox checked={false} onClick={() => onCompleteTask(task.task_id)} color={user?.color} />
+            <div className="task-body">
+              <div className="task-title">{task.title}</div>
+              <div className="task-meta">
+                {user && <span className="task-assignee" style={{color: user.color}}>{user.avatar} {user.name}</span>}
+                {task.due_time && <span>🕐 {formatTime(task.due_time)}</span>}
+                <span>{getCategoryIcon(task.category)} {task.category}</span>
+                {task.reward_points > 0 && <span>⭐ {task.reward_points} pts</span>}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {todayTasks.filter(t => t.status === 'completed').map(task => {
+        const user = getUser(task.assigned_to);
+        return (
+          <div key={task.task_id} className="task-card completed">
+            <div style={{position:'absolute', left:0, top:0, bottom:0, width:4, background:'var(--success)', borderRadius:'16px 0 0 16px'}} />
+            <TaskCheckbox checked={true} onClick={() => {}} color="var(--success)" />
+            <div className="task-body">
+              <div className="task-title">{task.title}</div>
+              <div className="task-meta">
+                {user && <span className="task-assignee" style={{color: user.color}}>{user.avatar} {user.name}</span>}
+                <StatusTag status="completed" />
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {todayTasks.length === 0 && <EmptyState icon="🎉" text="No tasks for today! Enjoy your day." />}
+
+      {/* Upcoming Tasks */}
+      {upcomingTasks.length > 0 && (
+        <>
+          <div className="section-header" style={{marginTop:8}}>
+            <span className="section-title">🔜 Upcoming</span>
+          </div>
+          {upcomingTasks.map(task => {
+            const user = getUser(task.assigned_to);
+            return (
+              <div key={task.task_id} className="task-card" style={{opacity:0.8}}>
+                <div style={{position:'absolute', left:0, top:0, bottom:0, width:4, background: user?.color || 'var(--text3)', borderRadius:'16px 0 0 16px'}} />
+                <div className="task-body">
+                  <div className="task-title">{task.title}</div>
+                  <div className="task-meta">
+                    {user && <span className="task-assignee" style={{color: user.color}}>{user.avatar} {user.name}</span>}
+                    <span>📅 {formatDate(task.due_date)}</span>
+                    {task.due_time && <span>🕐 {formatTime(task.due_time)}</span>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Tasks View ─────────────────────────────────────────────
+
+function TasksView({ tasks, users, onComplete, onReopen, onAdd, onEdit, onDelete, isAdmin }) {
+  const [filterUser, setFilterUser] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterCat, setFilterCat] = useState('all');
+  const [filterPriority, setFilterPriority] = useState('all');
+
+  const getUser = id => users.find(u => u.user_id === id);
+
+  const filtered = tasks.filter(t => {
+    if (filterUser !== 'all' && t.assigned_to !== filterUser) return false;
+    if (filterStatus === 'pending' && t.status !== 'pending') return false;
+    if (filterStatus === 'completed' && t.status !== 'completed') return false;
+    if (filterStatus === 'overdue' && !isOverdue(t)) return false;
+    if (filterCat !== 'all' && t.category !== filterCat) return false;
+    if (filterPriority !== 'all' && t.priority !== filterPriority) return false;
+    return true;
+  }).sort((a, b) => {
+    if (a.due_date !== b.due_date) return a.due_date < b.due_date ? -1 : 1;
+    if (a.due_time && b.due_time) return a.due_time < b.due_time ? -1 : 1;
+    return 0;
+  });
+
+  return (
+    <div className="animate-slide-in">
+      <div className="section-header" style={{marginTop:20}}>
+        <h2 style={{margin:0}}>All Tasks</h2>
+        {isAdmin && (
+          <button className="btn btn-primary" style={{padding:'8px 16px', fontSize:'0.85rem'}} onClick={onAdd}>
+            + New Task
+          </button>
+        )}
+      </div>
+
+      {/* Filters */}
+      <div className="tab-bar">
+        <button className={`tab-pill ${filterStatus === 'all' ? 'active' : ''}`} onClick={() => setFilterStatus('all')}>All</button>
+        <button className={`tab-pill ${filterStatus === 'pending' ? 'active' : ''}`} onClick={() => setFilterStatus('pending')}>Pending</button>
+        <button className={`tab-pill ${filterStatus === 'completed' ? 'active' : ''}`} onClick={() => setFilterStatus('completed')}>Completed</button>
+        <button className={`tab-pill ${filterStatus === 'overdue' ? 'active' : ''}`} onClick={() => setFilterStatus('overdue')}>⚠️ Overdue</button>
+      </div>
+
+      <div className="tab-bar" style={{marginTop:-8}}>
+        <button className={`tab-pill ${filterUser === 'all' ? 'active' : ''}`} onClick={() => setFilterUser('all')}>Everyone</button>
+        {users.map(u => (
+          <button key={u.user_id} className={`tab-pill ${filterUser === u.user_id ? 'active' : ''}`}
+            onClick={() => setFilterUser(u.user_id)} style={filterUser === u.user_id ? {background: u.color, borderColor: u.color} : {}}>
+            {u.avatar} {u.name}
+          </button>
+        ))}
+      </div>
+
+      <div className="tab-bar" style={{marginTop:-8}}>
+        {['all','Chore','School','Personal','Home','Errand'].map(c => (
+          <button key={c} className={`tab-pill ${filterCat === c ? 'active' : ''}`} onClick={() => setFilterCat(c)}>
+            {c === 'all' ? '📋 All' : `${getCategoryIcon(c)} ${c}`}
+          </button>
+        ))}
+      </div>
+
+      <div style={{color:'var(--text3)', fontSize:'0.85rem', fontWeight:600, marginBottom:12}}>
+        {filtered.length} task{filtered.length !== 1 ? 's' : ''}
+      </div>
+
+      {filtered.length === 0 && <EmptyState icon="✅" text="No tasks match your filters." />}
+
+      {filtered.map(task => {
+        const user = getUser(task.assigned_to);
+        const overdue = isOverdue(task);
+        return (
+          <div key={task.task_id} className={`task-card ${task.status === 'completed' ? 'completed' : ''}`}>
+            <div style={{position:'absolute', left:0, top:0, bottom:0, width:4,
+              background: overdue ? '#DC2626' : user?.color || 'var(--accent)',
+              borderRadius:'16px 0 0 16px'}} />
+
+            <TaskCheckbox
+              checked={task.status === 'completed'}
+              onClick={() => task.status === 'completed' ? onReopen(task.task_id) : onComplete(task.task_id)}
+              color={user?.color}
+            />
+
+            <div className="task-body">
+              <div className="task-title">{task.title}</div>
+              {task.description && (
+                <div style={{fontSize:'0.82rem', color:'var(--text3)', marginBottom:4}}>{task.description}</div>
+              )}
+              <div className="task-meta">
+                {user && <span className="task-assignee" style={{color: user.color}}>{user.avatar} {user.name}</span>}
+                <span>📅 {formatDate(task.due_date)}</span>
+                {task.due_time && <span>🕐 {formatTime(task.due_time)}</span>}
+                <PriorityTag priority={task.priority} />
+                {overdue && <span className="tag tag-overdue">⚠️ Overdue</span>}
+                {task.recurrence !== 'None' && task.recurrence && <span style={{fontSize:'0.75rem', color:'var(--text3)'}}>🔁 {task.recurrence}</span>}
+                {task.reward_points > 0 && <span>⭐ {task.reward_points} pts</span>}
+              </div>
+            </div>
+
+            {isAdmin && (
+              <div className="task-actions">
+                <button className="btn-icon" title="Edit" onClick={e => { e.stopPropagation(); onEdit(task); }}>✏️</button>
+                <button className="btn-icon" title="Delete" onClick={e => { e.stopPropagation(); onDelete(task.task_id); }}
+                  style={{color:'var(--danger)'}}>🗑️</button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Calendar View ──────────────────────────────────────────
+
+function CalendarView({ calendarEvents, tasks, users }) {
+  const [viewMode, setViewMode] = useState('day');
+  const today = new Date();
+  const [viewDate, setViewDate] = useState(today);
+
+  const getUser = id => users.find(u => u.user_id === id);
+
+  const dayStr = viewDate.toISOString().split('T')[0];
+  const dayTasks = tasks.filter(t => t.due_date === dayStr);
+  const dayEvents = calendarEvents.filter(e => new Date(e.start).toISOString().split('T')[0] === dayStr)
+    .sort((a,b) => new Date(a.start) - new Date(b.start));
+
+  function prevDay() { const d = new Date(viewDate); d.setDate(d.getDate()-1); setViewDate(d); }
+  function nextDay() { const d = new Date(viewDate); d.setDate(d.getDate()+1); setViewDate(d); }
+
+  // Build week
+  const weekStart = new Date(viewDate);
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  const weekDays = Array.from({length:7}, (_,i) => {
+    const d = new Date(weekStart); d.setDate(d.getDate()+i); return d;
+  });
+
+  return (
+    <div className="animate-slide-in">
+      <div className="section-header" style={{marginTop:20}}>
+        <h2 style={{margin:0}}>📅 Calendar</h2>
+        <div style={{display:'flex', gap:6}}>
+          <button className={`tab-pill ${viewMode === 'day' ? 'active' : ''}`} onClick={() => setViewMode('day')}>Day</button>
+          <button className={`tab-pill ${viewMode === 'week' ? 'active' : ''}`} onClick={() => setViewMode('week')}>Week</button>
+        </div>
+      </div>
+
+      {viewMode === 'day' && (
+        <>
+          {/* Day navigation */}
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16}}>
+            <button className="btn btn-secondary" style={{padding:'8px 14px'}} onClick={prevDay}>‹ Prev</button>
+            <div style={{textAlign:'center'}}>
+              <div style={{fontFamily:'var(--font-display)', fontSize:'1.3rem', fontWeight:700}}>
+                {viewDate.toLocaleDateString([], { weekday:'long' })}
+              </div>
+              <div style={{color:'var(--text3)', fontSize:'0.9rem'}}>
+                {viewDate.toLocaleDateString([], { month:'long', day:'numeric', year:'numeric' })}
+              </div>
+            </div>
+            <button className="btn btn-secondary" style={{padding:'8px 14px'}} onClick={nextDay}>Next ›</button>
+          </div>
+
+          {/* Events */}
+          {dayEvents.length > 0 && (
+            <div style={{marginBottom:20}}>
+              <div style={{fontWeight:700, fontSize:'0.85rem', color:'var(--text3)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.05em'}}>EVENTS</div>
+              {dayEvents.map(ev => {
+                const assignedUser = ev.assignedTo ? getUser(ev.assignedTo) : null;
+                return (
+                  <div key={ev.id} className="event-card">
+                    <div style={{width:4, alignSelf:'stretch', background:ev.color, borderRadius:4, marginRight:4}} />
+                    <div>
+                      <div className="event-title">{ev.title}</div>
+                      <div style={{fontSize:'0.8rem', color:'var(--text3)'}}>
+                        {formatTime(ev.start)} – {formatTime(ev.end)}
+                        {assignedUser && ` · ${assignedUser.avatar} ${assignedUser.name}`}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Tasks for this day */}
+          <div style={{fontWeight:700, fontSize:'0.85rem', color:'var(--text3)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.05em'}}>TASKS</div>
+          {dayTasks.length === 0 && <EmptyState icon="📅" text="No tasks scheduled for this day." />}
+          {dayTasks.sort((a,b) => (a.due_time || '').localeCompare(b.due_time || '')).map(task => {
+            const user = getUser(task.assigned_to);
+            return (
+              <div key={task.task_id} className={`task-card ${task.status === 'completed' ? 'completed' : ''}`}>
+                <div style={{position:'absolute', left:0, top:0, bottom:0, width:4, background: user?.color || 'var(--accent)', borderRadius:'16px 0 0 16px'}} />
+                <div className="task-body">
+                  <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:4}}>
+                    {task.due_time && <span style={{fontFamily:'var(--font-display)', fontSize:'1rem', fontWeight:700}}>{formatTime(task.due_time)}</span>}
+                    <span className="task-title" style={{marginBottom:0}}>{task.title}</span>
+                  </div>
+                  <div className="task-meta">
+                    {user && <span className="task-assignee" style={{color: user.color}}>{user.avatar} {user.name}</span>}
+                    <StatusTag status={task.status} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      {viewMode === 'week' && (
+        <>
+          <div style={{display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:4, marginBottom:16}}>
+            {weekDays.map(d => {
+              const ds = d.toISOString().split('T')[0];
+              const isActive = ds === viewDate.toISOString().split('T')[0];
+              const taskCount = tasks.filter(t => t.due_date === ds).length;
+              return (
+                <div key={ds} onClick={() => { setViewDate(d); setViewMode('day'); }}
+                  style={{
+                    textAlign:'center', padding:'10px 4px', borderRadius:12, cursor:'pointer',
+                    background: isActive ? 'var(--accent)' : 'var(--surface)',
+                    border: `1.5px solid ${isActive ? 'var(--accent)' : 'var(--border)'}`,
+                    color: isActive ? '#fff' : 'var(--text)',
+                  }}>
+                  <div style={{fontSize:'0.7rem', fontWeight:700, opacity:0.7}}>
+                    {d.toLocaleDateString([], {weekday:'short'})}
+                  </div>
+                  <div style={{fontSize:'1.1rem', fontWeight:900, fontFamily:'var(--font-display)'}}>
+                    {d.getDate()}
+                  </div>
+                  {taskCount > 0 && (
+                    <div style={{width:6, height:6, borderRadius:'50%', background: isActive ? '#fff' : 'var(--accent)', margin:'4px auto 0'}} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Events for whole week grouped by day */}
+          {weekDays.map(d => {
+            const ds = d.toISOString().split('T')[0];
+            const dayEvts = calendarEvents.filter(e => new Date(e.start).toISOString().split('T')[0] === ds);
+            const dayTsks = tasks.filter(t => t.due_date === ds);
+            if (dayEvts.length === 0 && dayTsks.length === 0) return null;
+            return (
+              <div key={ds} style={{marginBottom:12}}>
+                <div style={{fontWeight:800, fontSize:'0.85rem', color:'var(--text3)', marginBottom:6, textTransform:'uppercase'}}>
+                  {d.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'})}
+                </div>
+                {dayEvts.map(ev => (
+                  <div key={ev.id} style={{display:'flex', gap:8, alignItems:'center', padding:'8px 12px', background:'var(--surface)', borderRadius:10, marginBottom:4, border:'1.5px solid var(--border)'}}>
+                    <div style={{width:8, height:8, borderRadius:'50%', background:ev.color}} />
+                    <span style={{fontSize:'0.85rem', fontWeight:600}}>{ev.title}</span>
+                    <span style={{fontSize:'0.8rem', color:'var(--text3)', marginLeft:'auto'}}>{formatTime(ev.start)}</span>
+                  </div>
+                ))}
+                {dayTsks.slice(0,3).map(t => (
+                  <div key={t.task_id} style={{display:'flex', gap:8, alignItems:'center', padding:'8px 12px', background:'var(--surface2)', borderRadius:10, marginBottom:4, border:'1.5px solid var(--border)'}}>
+                    <span style={{fontSize:'0.85rem'}}>{getCategoryIcon(t.category)}</span>
+                    <span style={{fontSize:'0.85rem', fontWeight:600, textDecoration: t.status==='completed' ? 'line-through' : 'none'}}>{t.title}</span>
+                    {t.due_time && <span style={{fontSize:'0.8rem', color:'var(--text3)', marginLeft:'auto'}}>{formatTime(t.due_time)}</span>}
+                  </div>
+                ))}
+                {dayTsks.length > 3 && <div style={{fontSize:'0.8rem', color:'var(--text3)', paddingLeft:8}}>+{dayTsks.length-3} more tasks</div>}
+              </div>
+            );
+          })}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Routines View ──────────────────────────────────────────
+
+function RoutinesView({ routines, users }) {
+  const getUser = id => users.find(u => u.user_id === id);
+
+  const routineGroups = [
+    { name: 'Morning Routine', icon: '☀️', time: 'morning' },
+    { name: 'After School', icon: '🎒', time: 'afternoon' },
+    { name: 'Evening Routine', icon: '🌙', time: 'evening' },
+    { name: 'Bedtime Routine', icon: '😴', time: 'bedtime' },
+  ];
+
+  return (
+    <div className="animate-slide-in">
+      <div className="section-header" style={{marginTop:20}}>
+        <h2 style={{margin:0}}>🔁 Routines</h2>
+      </div>
+      <p style={{marginBottom:20, fontSize:'0.9rem'}}>Daily routines that auto-generate tasks each day.</p>
+
+      {routineGroups.map(group => {
+        const items = routines.filter(r => r.routine_name === group.name);
+        return (
+          <div key={group.name} className="routine-section">
+            <div className="routine-header">
+              <span className="routine-icon">{group.icon}</span>
+              <span className="routine-name">{group.name}</span>
+              <span style={{marginLeft:'auto', fontSize:'0.8rem', color:'var(--text3)', fontWeight:600}}>
+                {items.length} task{items.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            {items.length === 0 ? (
+              <div style={{padding:'12px 16px', color:'var(--text3)', fontSize:'0.9rem'}}>No tasks in this routine.</div>
+            ) : (
+              items.map(r => {
+                const user = getUser(r.assigned_to);
+                return (
+                  <div key={r.routine_id} className="card-sm" style={{display:'flex', alignItems:'center', gap:12, marginBottom:8}}>
+                    <div style={{fontSize:'1.4rem'}}>{getTaskIcon(r.task_title)}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:700, fontSize:'0.95rem'}}>{r.task_title}</div>
+                      <div style={{fontSize:'0.8rem', color:'var(--text3)'}}>
+                        {r.day_of_week} {r.time && `· ${formatTime(r.time)}`}
+                      </div>
+                    </div>
+                    {user && <MemberAvatar user={user} size="sm" />}
+                    <div style={{
+                      width:10, height:10, borderRadius:'50%',
+                      background: r.active ? 'var(--success)' : 'var(--text3)'
+                    }} />
+                  </div>
+                );
+              })
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Rewards View ───────────────────────────────────────────
+
+function RewardsView({ rewards, users, tasks }) {
+  const getUser = id => users.find(u => u.user_id === id);
+
+  const userPoints = users.map(u => {
+    const pts = rewards.filter(r => r.user_id === u.user_id).reduce((s,r) => s + r.points, 0);
+    const completed = tasks.filter(t => t.assigned_to === u.user_id && t.status === 'completed').length;
+    const todayPts = rewards.filter(r => r.user_id === u.user_id && r.date === new Date().toISOString().split('T')[0]).reduce((s,r) => s + r.points, 0);
+    return { ...u, points: pts, completed, todayPts };
+  }).filter(u => u.role === 'child' || u.points > 0).sort((a,b) => b.points - a.points);
+
+  const recentRewards = [...rewards].sort((a,b) => b.reward_id.localeCompare(a.reward_id)).slice(0, 20);
+
+  return (
+    <div className="animate-slide-in">
+      <div className="section-header" style={{marginTop:20}}>
+        <h2 style={{margin:0}}>⭐ Rewards</h2>
+      </div>
+
+      {/* Leaderboard */}
+      {userPoints.map((u, i) => (
+        <div key={u.user_id} className="card" style={{marginBottom:12, borderColor: i === 0 ? '#F6C026' : 'var(--border)'}}>
+          <div style={{display:'flex', alignItems:'center', gap:14}}>
+            <div style={{fontFamily:'var(--font-display)', fontSize:'1.6rem', fontWeight:900, color: i === 0 ? '#F6C026' : 'var(--text3)', minWidth:30}}>
+              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`}
+            </div>
+            <MemberAvatar user={u} />
+            <div style={{flex:1}}>
+              <div style={{fontWeight:800, fontSize:'1.05rem'}}>{u.name}</div>
+              <div style={{fontSize:'0.82rem', color:'var(--text3)'}}>
+                {u.completed} tasks completed · +{u.todayPts} pts today
+              </div>
+              <div className="progress-bar-wrap" style={{marginTop:6}}>
+                <div className="progress-bar-fill" style={{
+                  width: `${Math.min(100, u.points)}%`,
+                  background: u.color
+                }} />
+              </div>
+            </div>
+            <div className="points-display">⭐ {u.points}</div>
+          </div>
+        </div>
+      ))}
+
+      {/* Recent Activity */}
+      <div className="section-header" style={{marginTop:8}}>
+        <span className="section-title">📜 Recent Activity</span>
+      </div>
+
+      {recentRewards.length === 0 && <EmptyState icon="⭐" text="No rewards earned yet." />}
+
+      {recentRewards.map(r => {
+        const user = getUser(r.user_id);
+        return (
+          <div key={r.reward_id} style={{display:'flex', alignItems:'center', gap:12, padding:'12px 16px', background:'var(--surface)', borderRadius:12, border:'1.5px solid var(--border)', marginBottom:8}}>
+            {user && <MemberAvatar user={user} size="sm" />}
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700, fontSize:'0.9rem'}}>{user?.name || 'Unknown'}</div>
+              <div style={{fontSize:'0.8rem', color:'var(--text3)'}}>{r.reason} · {r.date}</div>
+            </div>
+            <div className="points-display" style={{fontSize:'0.85rem', padding:'4px 10px'}}>⭐ +{r.points}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Settings View ──────────────────────────────────────────
+
+function SettingsView({ settings, users, isDark, onToggleDark, isAdmin, onRequestAdmin }) {
+  return (
+    <div className="animate-slide-in">
+      <div className="section-header" style={{marginTop:20}}>
+        <h2 style={{margin:0}}>⚙️ Settings</h2>
+      </div>
+
+      <div className="settings-group">
+        <div className="settings-group-title">Appearance</div>
+        <div className="settings-row">
+          <div>
+            <div className="settings-row-label">Dark Mode</div>
+            <div className="settings-row-value">Switch to dark theme</div>
+          </div>
+          <button className={`toggle ${isDark ? 'on' : ''}`} onClick={onToggleDark} />
+        </div>
+      </div>
+
+      <div className="settings-group">
+        <div className="settings-group-title">Family Members</div>
+        {users.map(u => (
+          <div key={u.user_id} className="settings-row">
+            <div style={{display:'flex', alignItems:'center', gap:10}}>
+              <MemberAvatar user={u} size="sm" />
+              <div>
+                <div className="settings-row-label">{u.name}</div>
+                <div className="settings-row-value">{u.role} · {u.color}</div>
+              </div>
+            </div>
+            <div style={{width:10, height:10, borderRadius:'50%', background: u.active ? 'var(--success)' : 'var(--text3)'}} />
+          </div>
+        ))}
+      </div>
+
+      <div className="settings-group">
+        <div className="settings-group-title">Google Integration</div>
+        <div className="settings-row">
+          <div>
+            <div className="settings-row-label">Google Sheets</div>
+            <div className="settings-row-value" style={{fontFamily:'monospace', fontSize:'0.75rem'}}>
+              {CONFIG.DEMO_MODE ? '🟡 Demo Mode' : CONFIG.SHEET_ID ? '🟢 Connected' : '🔴 Not configured'}
+            </div>
+          </div>
+          <button className="btn btn-secondary" style={{padding:'6px 12px', fontSize:'0.8rem'}}>Configure</button>
+        </div>
+        <div className="settings-row">
+          <div>
+            <div className="settings-row-label">Google Calendar</div>
+            <div className="settings-row-value" style={{fontFamily:'monospace', fontSize:'0.75rem'}}>
+              {CONFIG.DEMO_MODE ? '🟡 Demo Mode' : CONFIG.CALENDAR_ID ? '🟢 Connected' : '🔴 Not configured'}
+            </div>
+          </div>
+          <button className="btn btn-secondary" style={{padding:'6px 12px', fontSize:'0.8rem'}}>Configure</button>
+        </div>
+        <div className="settings-row">
+          <div>
+            <div className="settings-row-label">Demo Mode</div>
+            <div className="settings-row-value">Using sample data (no Google API)</div>
+          </div>
+          <div className={`toggle ${CONFIG.DEMO_MODE ? 'on' : ''}`} style={{pointerEvents:'none'}} />
+        </div>
+      </div>
+
+      {!isAdmin && (
+        <div className="settings-group">
+          <div className="settings-group-title">Admin</div>
+          <div className="settings-row" style={{cursor:'pointer'}} onClick={onRequestAdmin}>
+            <div>
+              <div className="settings-row-label">🔐 Enter Parent Mode</div>
+              <div className="settings-row-value">Manage tasks, users, and rewards</div>
+            </div>
+            <span style={{color:'var(--accent)', fontWeight:700}}>›</span>
+          </div>
+        </div>
+      )}
+
+      <div className="settings-group">
+        <div className="settings-group-title">About</div>
+        <div className="settings-row">
+          <div className="settings-row-label">Home Hub Task Tracker</div>
+          <div className="settings-row-value">v1.0 MVP</div>
+        </div>
+        <div className="settings-row">
+          <div>
+            <div className="settings-row-label">Setup Guide</div>
+            <div className="settings-row-value">How to connect Google Sheets & Calendar</div>
+          </div>
+          <a href="SETUP.md" style={{color:'var(--accent)', fontWeight:700, fontSize:'0.9rem', textDecoration:'none'}}>View</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Kid Mode View ──────────────────────────────────────────
+
+function KidModeView({ currentUser, tasks, onComplete }) {
+  const today = new Date().toISOString().split('T')[0];
+  const myTasks = tasks.filter(t => t.assigned_to === currentUser.user_id && t.due_date === today);
+  const completed = myTasks.filter(t => t.status === 'completed').length;
+  const total = myTasks.length;
+
+  return (
+    <div style={{padding:'20px 16px 100px'}}>
+      {/* Kid Header */}
+      <div style={{
+        background: `linear-gradient(135deg, ${currentUser.color}, ${currentUser.color}BB)`,
+        borderRadius:24, padding:'24px', marginBottom:24, color:'#fff', textAlign:'center'
+      }}>
+        <div style={{fontSize:'3rem', marginBottom:8}}>{currentUser.avatar}</div>
+        <div style={{fontFamily:'var(--font-display)', fontSize:'1.8rem', fontWeight:900}}>Hi, {currentUser.name}!</div>
+        <div style={{fontSize:'0.95rem', opacity:0.9, marginTop:4}}>
+          {completed}/{total} done today 🎯
+        </div>
+        <div style={{marginTop:12, background:'rgba(255,255,255,0.3)', borderRadius:99, height:12, overflow:'hidden'}}>
+          <div style={{height:'100%', background:'#fff', borderRadius:99, width:`${total > 0 ? (completed/total*100) : 0}%`, transition:'width 0.5s'}} />
+        </div>
+      </div>
+
+      {/* Points earned today */}
+      {completed > 0 && (
+        <div style={{textAlign:'center', marginBottom:20}}>
+          <div className="points-display" style={{fontSize:'1.1rem', padding:'10px 20px'}}>
+            ⭐ You earned points today! Keep going!
+          </div>
+        </div>
+      )}
+
+      {/* Task cards */}
+      <div className="kid-grid">
+        {myTasks.map(task => (
+          <div key={task.task_id} className={`kid-task-card ${task.status === 'completed' ? 'completed' : ''}`}>
+            <div className="kid-task-icon">{getTaskIcon(task.title)}</div>
+            <div className="kid-task-title">{task.title}</div>
+            {task.due_time && <div className="kid-task-time">🕐 {formatTime(task.due_time)}</div>}
+            {task.reward_points > 0 && (
+              <div className="kid-task-points">⭐ {task.reward_points} points!</div>
+            )}
+            {task.status === 'completed' ? (
+              <div style={{
+                background:'var(--success-bg)', color:'var(--success)',
+                borderRadius:12, padding:'14px', fontWeight:800, fontSize:'1.1rem', textAlign:'center'
+              }}>
+                ✅ Done! Great job!
+              </div>
+            ) : (
+              <button className="kid-done-btn" onClick={() => onComplete(task.task_id)}>
+                ✅ Done!
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {myTasks.length === 0 && (
+        <div style={{textAlign:'center', padding:'48px 24px'}}>
+          <div style={{fontSize:'4rem', marginBottom:16}}>🎉</div>
+          <div style={{fontFamily:'var(--font-display)', fontSize:'1.6rem', fontWeight:900}}>All Done!</div>
+          <div style={{color:'var(--text3)', marginTop:8}}>No tasks for today. Amazing work!</div>
+        </div>
+      )}
+    </div>
+  );
+}
+// ============================================================
+// Home Hub Task Tracker — Root App Component
+// ============================================================
+
+function App() {
+  // ── State ────────────────────────────────────────────────
+  const [users, setUsers] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [routines, setRoutines] = useState([]);
+  const [rewards, setRewards] = useState([]);
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [settings, setSettings] = useState({});
+
+  const [activeTab, setActiveTab] = useState('home');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showUserSelect, setShowUserSelect] = useState(true);
+  const [showPinScreen, setShowPinScreen] = useState(false);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [isDark, setIsDark] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isKidMode, setIsKidMode] = useState(false);
+
+  // ── Load Data ────────────────────────────────────────────
+  useEffect(() => {
+    async function loadAll() {
+      try {
+        const [u, t, r, rw, ev, s] = await Promise.all([
+          SheetsAPI.getUsers(),
+          SheetsAPI.getTasks(),
+          SheetsAPI.getRoutines(),
+          SheetsAPI.getRewards(),
+          CalendarAPI.getTodayEvents(),
+          SheetsAPI.getSettings(),
+        ]);
+        setUsers(u);
+        setTasks(t);
+        setRoutines(r);
+        setRewards(rw);
+        setCalendarEvents(ev);
+        setSettings(s);
+      } catch (err) {
+        console.error('Load error:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadAll();
+
+    // Auto-refresh
+    const interval = setInterval(loadAll, CONFIG.AUTO_REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch week events when calendar tab opens
+  useEffect(() => {
+    if (activeTab === 'calendar') {
+      CalendarAPI.getWeekEvents().then(setCalendarEvents).catch(console.error);
+    }
+  }, [activeTab]);
+
+  // Dark mode
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
+
+  // Kid mode detection
+  useEffect(() => {
+    if (currentUser?.role === 'child' && !isAdmin) {
+      setIsKidMode(true);
+    } else {
+      setIsKidMode(false);
+    }
+  }, [currentUser, isAdmin]);
+
+  // ── Clock ─────────────────────────────────────────────────
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // ── Handlers ─────────────────────────────────────────────
+
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2600);
+  }
+
+  async function handleCompleteTask(taskId) {
+    try {
+      await SheetsAPI.completeTask(taskId);
+      // Refresh
+      const [t, rw] = await Promise.all([SheetsAPI.getTasks(), SheetsAPI.getRewards()]);
+      setTasks(t);
+      setRewards(rw);
+      Confetti.launch();
+      showToast('Task completed! 🎉');
+    } catch (err) {
+      console.error('Complete task error:', err);
+    }
+  }
+
+  async function handleReopenTask(taskId) {
+    try {
+      await SheetsAPI.reopenTask(taskId);
+      const t = await SheetsAPI.getTasks();
+      setTasks(t);
+      showToast('Task reopened.');
+    } catch (err) {
+      console.error('Reopen task error:', err);
+    }
+  }
+
+  async function handleSaveTask(task) {
+    try {
+      if (editingTask) {
+        await SheetsAPI.updateTask(task);
+        showToast('Task updated!');
+      } else {
+        await SheetsAPI.addTask(task);
+        showToast('Task added!');
+      }
+      const t = await SheetsAPI.getTasks();
+      setTasks(t);
+      setShowTaskForm(false);
+      setEditingTask(null);
+    } catch (err) {
+      console.error('Save task error:', err);
+    }
+  }
+
+  async function handleDeleteTask(taskId) {
+    if (!confirm('Delete this task?')) return;
+    try {
+      await SheetsAPI.deleteTask(taskId);
+      const t = await SheetsAPI.getTasks();
+      setTasks(t);
+      showToast('Task deleted.');
+    } catch (err) {
+      console.error('Delete task error:', err);
+    }
+  }
+
+  function handleEditTask(task) {
+    setEditingTask(task);
+    setShowTaskForm(true);
+  }
+
+  function handleAddTask() {
+    setEditingTask(null);
+    setShowTaskForm(true);
+  }
+
+  function handleSelectUser(user) {
+    setCurrentUser(user);
+    setShowUserSelect(false);
+    if (user.role === 'parent') {
+      setIsAdmin(true);
+    }
+  }
+
+  function handleAdminSuccess() {
+    setIsAdmin(true);
+    setShowPinScreen(false);
+    showToast('👑 Parent mode enabled!');
+  }
+
+  // ── Nav Tabs ─────────────────────────────────────────────
+  const NAV = [
+    { id: 'home', icon: '🏠', label: 'Home' },
+    { id: 'tasks', icon: '✅', label: 'Tasks' },
+    { id: 'calendar', icon: '📅', label: 'Calendar' },
+    { id: 'routines', icon: '🔁', label: 'Routines' },
+    { id: 'rewards', icon: '⭐', label: 'Rewards' },
+    { id: 'settings', icon: '⚙️', label: 'Settings' },
+  ];
+
+  // ── Render ────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div style={{display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100vh', gap:16}}>
+        <div style={{fontSize:'3rem', animation:'pulse 1s infinite'}}>🏠</div>
+        <div style={{fontFamily:'var(--font-display)', fontSize:'1.4rem', fontWeight:700}}>Loading Home Hub…</div>
+      </div>
+    );
+  }
+
+  if (showUserSelect) {
+    return <UserSelectScreen users={users} onSelect={handleSelectUser} />;
+  }
+
+  if (showPinScreen) {
+    return <PinScreen onSuccess={handleAdminSuccess} onCancel={() => setShowPinScreen(false)} />;
+  }
+
+  // Kid mode is a full separate view
+  if (isKidMode && activeTab !== 'settings' && activeTab !== 'rewards') {
+    return (
+      <div className="kid-mode">
+        {/* Kid Top Bar */}
+        <div className="top-bar" style={{background:`linear-gradient(135deg, ${currentUser.color}, ${currentUser.color}BB)`}}>
+          <div className="top-bar-brand">
+            <div style={{fontSize:'1.8rem'}}>{currentUser.avatar}</div>
+            <span style={{fontFamily:'var(--font-display)', fontSize:'1.2rem', fontWeight:900, color:'#fff'}}>{currentUser.name}'s Tasks</span>
+          </div>
+          <div style={{display:'flex', gap:8}}>
+            <button className="icon-btn" style={{background:'rgba(255,255,255,0.25)', color:'#fff'}}
+              onClick={() => setShowUserSelect(true)} title="Switch User">👤</button>
+          </div>
+        </div>
+
+        <KidModeView
+          currentUser={currentUser}
+          tasks={tasks}
+          onComplete={handleCompleteTask}
+        />
+
+        {/* Kid bottom nav - simplified */}
+        <div className="bottom-nav">
+          <button className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>
+            <span className="nav-icon">🏠</span><span>My Tasks</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'rewards' ? 'active' : ''}`} onClick={() => setActiveTab('rewards')}>
+            <span className="nav-icon">⭐</span><span>Rewards</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
+            <span className="nav-icon">⚙️</span><span>Settings</span>
+          </button>
+        </div>
+
+        {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      </div>
+    );
+  }
+
+  // Full app view
+  return (
+    <div className="app-container">
+      {/* Top Bar */}
+      <div className="top-bar">
+        <div className="top-bar-brand">
+          <div className="brand-icon">🏠</div>
+          <span className="brand-name">Home Hub</span>
+        </div>
+
+        <div className="top-bar-center">
+          <div className="top-date">
+            {time.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+          </div>
+          <div className="top-time">
+            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+
+        <div className="top-bar-actions">
+          {currentUser && (
+            <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}}
+              onClick={() => setShowUserSelect(true)}>
+              <MemberAvatar user={currentUser} size="sm" />
+            </div>
+          )}
+          {isAdmin && (
+            <div style={{background:'var(--accent-bg)', color:'var(--accent)', padding:'4px 10px', borderRadius:99, fontSize:'0.75rem', fontWeight:800}}>
+              👑 Admin
+            </div>
+          )}
+          {!isAdmin && (
+            <button className="icon-btn" title="Parent Mode" onClick={() => setShowPinScreen(true)}>🔐</button>
+          )}
+          <button className="icon-btn" title="Toggle Dark Mode" onClick={() => setIsDark(d => !d)}>
+            {isDark ? '☀️' : '🌙'}
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="main-content">
+        {activeTab === 'home' && (
+          <HomeView
+            tasks={tasks} users={users} calendarEvents={calendarEvents}
+            rewards={rewards} settings={settings} currentUser={currentUser}
+            onCompleteTask={handleCompleteTask} onAddTask={handleAddTask}
+          />
+        )}
+        {activeTab === 'tasks' && (
+          <TasksView
+            tasks={tasks} users={users}
+            onComplete={handleCompleteTask} onReopen={handleReopenTask}
+            onAdd={handleAddTask} onEdit={handleEditTask} onDelete={handleDeleteTask}
+            isAdmin={isAdmin}
+          />
+        )}
+        {activeTab === 'calendar' && (
+          <CalendarView calendarEvents={calendarEvents} tasks={tasks} users={users} />
+        )}
+        {activeTab === 'routines' && (
+          <RoutinesView routines={routines} users={users} />
+        )}
+        {activeTab === 'rewards' && (
+          <RewardsView rewards={rewards} users={users} tasks={tasks} />
+        )}
+        {activeTab === 'settings' && (
+          <SettingsView
+            settings={settings} users={users} isDark={isDark}
+            onToggleDark={() => setIsDark(d => !d)}
+            isAdmin={isAdmin} onRequestAdmin={() => setShowPinScreen(true)}
+          />
+        )}
+      </div>
+
+      {/* Floating Add Button (admin only on tasks/home) */}
+      {isAdmin && (activeTab === 'tasks' || activeTab === 'home') && (
+        <button className="fab" onClick={handleAddTask} title="Add Task">+</button>
+      )}
+
+      {/* Bottom Navigation */}
+      <nav className="bottom-nav">
+        {NAV.map(tab => (
+          <button key={tab.id} className={`nav-item ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}>
+            <span className="nav-icon">{tab.icon}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      {/* Task Form Modal */}
+      {showTaskForm && (
+        <TaskFormModal
+          users={users}
+          editTask={editingTask}
+          onSave={handleSaveTask}
+          onClose={() => { setShowTaskForm(false); setEditingTask(null); }}
+        />
+      )}
+
+      {/* Toast */}
+      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+    </div>
+  );
+}
+
+// ── Mount ─────────────────────────────────────────────────
+const rootEl = document.getElementById('root');
+const root = ReactDOM.createRoot(rootEl);
+root.render(React.createElement(App));
+  </script>
+</body>
+</html>
