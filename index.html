@@ -966,6 +966,9 @@ p { color: var(--text2); }
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <!-- Google APIs: GAPI for Calendar reads, GIS for OAuth token -->
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <script>
 // ============================================================
@@ -1267,12 +1270,19 @@ const SheetsAPI = (() => {
   }
 
   async function getAccessToken() {
+    // Reuse CalendarAPI's GIS token (same OAuth flow, same scopes cover Sheets too)
+    // Add Sheets scope when requesting token
+    if (!window.google?.accounts?.oauth2) throw new Error('Google Identity Services not loaded');
     return new Promise((resolve, reject) => {
-      if (!window.gapi?.auth2) { reject(new Error('OAuth not initialized')); return; }
-      const auth = gapi.auth2.getAuthInstance();
-      const user = auth.currentUser.get();
-      const token = user.getAuthResponse().access_token;
-      resolve(token);
+      const client = google.accounts.oauth2.initTokenClient({
+        client_id: CONFIG.GOOGLE_CLIENT_ID,
+        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
+        callback: (resp) => {
+          if (resp.error) reject(new Error(resp.error));
+          else resolve(resp.access_token);
+        },
+      });
+      client.requestAccessToken({ prompt: '' });
     });
   }
 
@@ -1415,12 +1425,61 @@ const SheetsAPI = (() => {
 
 const CalendarAPI = (() => {
 
+  // ── Token state ────────────────────────────────────────
+  let _accessToken = null;
+  let _tokenExpiry = 0;
+  let _tokenClient = null;
+  let _tokenResolvers = []; // queue of {resolve, reject} waiting for a token
+
   function isConfigured() {
     return !CONFIG.DEMO_MODE &&
       CONFIG.CALENDAR_ID &&
       CONFIG.CALENDAR_ID !== 'YOUR_CALENDAR_ID_OR_EMAIL' &&
+      CONFIG.GOOGLE_CLIENT_ID &&
+      CONFIG.GOOGLE_CLIENT_ID !== 'YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com' &&
       CONFIG.GOOGLE_API_KEY &&
       CONFIG.GOOGLE_API_KEY !== 'YOUR_GOOGLE_API_KEY';
+  }
+
+  // Initialize the GIS token client (called once on first use)
+  function initTokenClient() {
+    if (_tokenClient) return;
+    if (!window.google?.accounts?.oauth2) {
+      console.warn('Home Hub: Google Identity Services not loaded yet.');
+      return;
+    }
+    _tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CONFIG.GOOGLE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
+      callback: (tokenResponse) => {
+        if (tokenResponse.error) {
+          _tokenResolvers.forEach(({ reject }) => reject(new Error(tokenResponse.error)));
+        } else {
+          _accessToken = tokenResponse.access_token;
+          _tokenExpiry = Date.now() + (tokenResponse.expires_in - 60) * 1000;
+          _tokenResolvers.forEach(({ resolve }) => resolve(_accessToken));
+        }
+        _tokenResolvers = [];
+      },
+    });
+  }
+
+  // Get a valid access token — shows Google consent popup if needed
+  async function getAccessToken() {
+    initTokenClient();
+    if (!_tokenClient) throw new Error('Google Identity Services not available');
+    // Return cached token if still valid
+    if (_accessToken && Date.now() < _tokenExpiry) return _accessToken;
+    // Request a new token (shows popup if not already authorized)
+    return new Promise((resolve, reject) => {
+      _tokenResolvers.push({ resolve, reject });
+      try {
+        _tokenClient.requestAccessToken({ prompt: _accessToken ? '' : 'consent' });
+      } catch (e) {
+        _tokenResolvers = _tokenResolvers.filter(r => r.resolve !== resolve);
+        reject(e);
+      }
+    });
   }
 
   async function getEventsForRange(startISO, endISO) {
@@ -1432,15 +1491,17 @@ const CalendarAPI = (() => {
         return es >= start && es <= end;
       });
     }
+    const token = await getAccessToken();
     const params = new URLSearchParams({
-      key: CONFIG.GOOGLE_API_KEY,
       timeMin: startISO,
       timeMax: endISO,
       singleEvents: 'true',
       orderBy: 'startTime',
     });
     const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CONFIG.CALENDAR_ID)}/events?${params}`;
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     if (!res.ok) throw new Error(`Calendar API error: ${res.status}`);
     const data = await res.json();
     return (data.items || []).map(item => ({
@@ -1496,17 +1557,8 @@ const CalendarAPI = (() => {
     return map[id] || '#7C3AED';
   }
 
-  async function getAccessToken() {
-    return new Promise((resolve, reject) => {
-      if (!window.gapi?.auth2) { reject(new Error('OAuth not initialized')); return; }
-      const user = gapi.auth2.getAuthInstance().currentUser.get();
-      resolve(user.getAuthResponse().access_token);
-    });
-  }
-
-  return { getTodayEvents, getWeekEvents, addEvent };
+  return { getTodayEvents, getWeekEvents, addEvent, getAccessToken, isConfigured };
 })();
-
 // ============================================================
 // Home Hub — Confetti Animation
 // ============================================================
@@ -2582,7 +2634,7 @@ function RewardsView({ rewards, users, tasks }) {
 
 // ── Settings View ──────────────────────────────────────────
 
-function SettingsView({ settings, users, isDark, onToggleDark, isAdmin, onRequestAdmin }) {
+function SettingsView({ settings, users, isDark, onToggleDark, isAdmin, onRequestAdmin, setCalendarEvents, showToast }) {
   return (
     <div className="animate-slide-in">
       <div className="section-header" style={{marginTop:20}}>
@@ -2631,10 +2683,34 @@ function SettingsView({ settings, users, isDark, onToggleDark, isAdmin, onReques
           <div>
             <div className="settings-row-label">Google Calendar</div>
             <div className="settings-row-value" style={{fontFamily:'monospace', fontSize:'0.75rem'}}>
-              {CONFIG.DEMO_MODE ? '🟡 Demo Mode' : CONFIG.CALENDAR_ID ? '🟢 Connected' : '🔴 Not configured'}
+              {CONFIG.DEMO_MODE
+                ? '🟡 Demo Mode'
+                : (CONFIG.CALENDAR_ID && CONFIG.CALENDAR_ID !== 'YOUR_CALENDAR_ID_OR_EMAIL' &&
+                   CONFIG.GOOGLE_CLIENT_ID && CONFIG.GOOGLE_CLIENT_ID !== 'YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com')
+                  ? '🟢 Configured — connect below to authorize'
+                  : CONFIG.CALENDAR_ID && CONFIG.CALENDAR_ID !== 'YOUR_CALENDAR_ID_OR_EMAIL'
+                    ? '🟠 Needs OAuth Client ID in config'
+                    : '🔴 Not configured'}
             </div>
           </div>
-          <button className="btn btn-secondary" style={{padding:'6px 12px', fontSize:'0.8rem'}}>Configure</button>
+          {!CONFIG.DEMO_MODE &&
+           CONFIG.CALENDAR_ID && CONFIG.CALENDAR_ID !== 'YOUR_CALENDAR_ID_OR_EMAIL' &&
+           CONFIG.GOOGLE_CLIENT_ID && CONFIG.GOOGLE_CLIENT_ID !== 'YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com' && (
+            <button className="btn btn-primary" style={{padding:'6px 14px', fontSize:'0.8rem', whiteSpace:'nowrap'}}
+              onClick={async () => {
+                try {
+                  await CalendarAPI.getAccessToken();
+                  const evs = await CalendarAPI.getTodayEvents();
+                  setCalendarEvents(evs);
+                  showToast('📅 Calendar connected!');
+                } catch(e) {
+                  showToast('❌ Calendar auth failed — check Client ID');
+                  console.error(e);
+                }
+              }}>
+              🔗 Connect Calendar
+            </button>
+          )}
         </div>
         <div className="settings-row">
           <div>
@@ -3064,6 +3140,7 @@ function App() {
             settings={settings} users={users} isDark={isDark}
             onToggleDark={() => setIsDark(d => !d)}
             isAdmin={isAdmin} onRequestAdmin={() => setShowPinScreen(true)}
+            setCalendarEvents={setCalendarEvents} showToast={showToast}
           />
         )}
       </div>
