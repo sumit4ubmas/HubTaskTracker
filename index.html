@@ -782,6 +782,11 @@ p { color: var(--text2); }
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
@@ -1705,9 +1710,34 @@ function isOverdue(task) {
   return false;
 }
 
+// Default + extended categories — also reads custom ones from Settings sheet
+const DEFAULT_CATEGORIES = [
+  { name:'Chore',     icon:'🧹' },
+  { name:'School',    icon:'📚' },
+  { name:'Personal',  icon:'🌟' },
+  { name:'Home',      icon:'🏠' },
+  { name:'Errand',    icon:'🛒' },
+  { name:'Health',    icon:'💊' },
+  { name:'Sports',    icon:'⚽' },
+  { name:'Finance',   icon:'💳' },
+  { name:'Social',    icon:'🎉' },
+  { name:'Pet',       icon:'🐾' },
+  { name:'Garden',    icon:'🌱' },
+  { name:'Vehicle',   icon:'🚗' },
+  { name:'Other',     icon:'📌' },
+];
+
+// Global custom categories added by admin (persisted in memory, editable in Settings)
+let CUSTOM_CATEGORIES = [];
+
+function getAllCategories() {
+  return [...DEFAULT_CATEGORIES, ...CUSTOM_CATEGORIES];
+}
+
 function getCategoryIcon(cat) {
-  const map = { Chore:'🧹', School:'📚', Personal:'🌟', Home:'🏠', Errand:'🛒', Other:'📌' };
-  return map[cat] || '📌';
+  const all = getAllCategories();
+  const found = all.find(c => c.name === cat);
+  return found ? found.icon : '📌';
 }
 
 function getTaskIcon(title) {
@@ -1784,6 +1814,16 @@ function EmptyState({ icon, text }) {
 
 // ── Task Form Modal ───────────────────────────────────────
 
+const WEEKDAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function parseCustomDays(recurrence) {
+  // e.g. "Custom:Mon,Wed,Fri" → ['Mon','Wed','Fri']
+  if (recurrence && recurrence.startsWith('Custom:')) {
+    return recurrence.replace('Custom:', '').split(',').filter(Boolean);
+  }
+  return [];
+}
+
 function TaskFormModal({ users, editTask, onSave, onClose }) {
   const defaultForm = {
     title: '', description: '', assigned_to: users[0]?.user_id || '',
@@ -1791,13 +1831,48 @@ function TaskFormModal({ users, editTask, onSave, onClose }) {
     due_time: '', recurrence: 'None', reward_points: 10, status: 'pending'
   };
   const [form, setForm] = useState(editTask ? { ...editTask } : defaultForm);
+  const [customDays, setCustomDays] = useState(() => parseCustomDays(editTask?.recurrence || ''));
+  const [showNewCat, setShowNewCat] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('📌');
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const categories = getAllCategories();
+
+  function toggleDay(day) {
+    setCustomDays(prev => {
+      const next = prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day];
+      set('recurrence', next.length > 0 ? 'Custom:' + next.join(',') : 'Custom:');
+      return next;
+    });
+  }
+
+  function handleRecurrenceChange(val) {
+    set('recurrence', val);
+    if (val !== 'Custom') setCustomDays([]);
+  }
+
+  function handleAddCategory() {
+    if (!newCatName.trim()) return;
+    const existing = getAllCategories().find(c => c.name.toLowerCase() === newCatName.trim().toLowerCase());
+    if (!existing) {
+      CUSTOM_CATEGORIES.push({ name: newCatName.trim(), icon: newCatIcon });
+    }
+    set('category', newCatName.trim());
+    setShowNewCat(false);
+    setNewCatName('');
+    setNewCatIcon('📌');
+  }
 
   function handleSubmit() {
     if (!form.title.trim()) return;
-    onSave({ ...form, reward_points: parseInt(form.reward_points) || 0 });
+    const finalRecurrence = form.recurrence === 'Custom' || (form.recurrence.startsWith && form.recurrence.startsWith('Custom:'))
+      ? (customDays.length > 0 ? 'Custom:' + customDays.join(',') : 'None')
+      : form.recurrence;
+    onSave({ ...form, recurrence: finalRecurrence, reward_points: parseInt(form.reward_points) || 0 });
   }
+
+  const showCustomDays = form.recurrence === 'Custom' || (form.recurrence && form.recurrence.startsWith('Custom:'));
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -1827,29 +1902,87 @@ function TaskFormModal({ users, editTask, onSave, onClose }) {
             </select>
           </div>
           <div className="form-group" style={{marginBottom:0}}>
-            <label className="form-label">Category</label>
-            <select className="form-select" value={form.category} onChange={e => set('category', e.target.value)}>
-              {['Chore','School','Personal','Home','Errand','Other'].map(c => <option key={c}>{c}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <div className="form-row">
-          <div className="form-group" style={{marginBottom:0}}>
             <label className="form-label">Priority</label>
             <select className="form-select" value={form.priority} onChange={e => set('priority', e.target.value)}>
               {['High','Medium','Low'].map(p => <option key={p}>{p}</option>)}
             </select>
           </div>
-          <div className="form-group" style={{marginBottom:0}}>
-            <label className="form-label">Recurrence</label>
-            <select className="form-select" value={form.recurrence} onChange={e => set('recurrence', e.target.value)}>
-              {['None','Daily','Weekdays','Weekly','Monthly'].map(r => <option key={r}>{r}</option>)}
-            </select>
-          </div>
         </div>
 
-        <div className="form-row" style={{marginTop:'16px'}}>
+        {/* Category with add custom */}
+        <div className="form-group">
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6}}>
+            <label className="form-label" style={{margin:0}}>Category</label>
+            <button style={{background:'none', border:'none', color:'var(--accent)', fontSize:'0.8rem', fontWeight:800, cursor:'pointer'}}
+              onClick={() => setShowNewCat(s => !s)}>
+              {showNewCat ? '✕ Cancel' : '+ New Category'}
+            </button>
+          </div>
+          {showNewCat ? (
+            <div style={{display:'flex', gap:8, alignItems:'center', background:'var(--surface2)', borderRadius:'var(--radius-sm)', padding:'10px 12px', border:'1.5px solid var(--border)'}}>
+              <input value={newCatIcon} onChange={e => setNewCatIcon(e.target.value)}
+                style={{width:44, textAlign:'center', fontSize:'1.3rem', border:'1.5px solid var(--border)', borderRadius:8, padding:'4px'}} maxLength={2} />
+              <input className="form-input" placeholder="Category name" value={newCatName}
+                onChange={e => setNewCatName(e.target.value)} style={{flex:1, marginBottom:0}} />
+              <button className="btn btn-primary" style={{padding:'8px 14px', fontSize:'0.82rem'}} onClick={handleAddCategory}>Add</button>
+            </div>
+          ) : (
+            <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
+              {categories.map(c => (
+                <button key={c.name}
+                  onClick={() => set('category', c.name)}
+                  style={{
+                    padding:'6px 12px', borderRadius:99,
+                    border: `1.5px solid ${form.category === c.name ? 'var(--accent)' : 'var(--border)'}`,
+                    background: form.category === c.name ? 'var(--accent-bg)' : 'var(--surface)',
+                    color: form.category === c.name ? 'var(--accent)' : 'var(--text2)',
+                    fontWeight: 700, fontSize:'0.8rem', cursor:'pointer',
+                  }}>
+                  {c.icon} {c.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Recurrence */}
+        <div className="form-group">
+          <label className="form-label">Recurrence</label>
+          <div style={{display:'flex', flexWrap:'wrap', gap:6, marginBottom: showCustomDays ? 10 : 0}}>
+            {['None','Daily','Weekdays','Weekly','Monthly','Custom'].map(r => (
+              <button key={r}
+                onClick={() => handleRecurrenceChange(r)}
+                style={{
+                  padding:'6px 12px', borderRadius:99,
+                  border: `1.5px solid ${(form.recurrence === r || (r === 'Custom' && showCustomDays)) ? 'var(--accent)' : 'var(--border)'}`,
+                  background: (form.recurrence === r || (r === 'Custom' && showCustomDays)) ? 'var(--accent-bg)' : 'var(--surface)',
+                  color: (form.recurrence === r || (r === 'Custom' && showCustomDays)) ? 'var(--accent)' : 'var(--text2)',
+                  fontWeight: 700, fontSize:'0.8rem', cursor:'pointer',
+                }}>
+                {r}
+              </button>
+            ))}
+          </div>
+          {showCustomDays && (
+            <div style={{display:'flex', gap:6, flexWrap:'wrap', marginTop:6}}>
+              {WEEKDAY_NAMES.map(day => (
+                <button key={day}
+                  onClick={() => toggleDay(day)}
+                  style={{
+                    width:44, height:44, borderRadius:'50%',
+                    border: `2px solid ${customDays.includes(day) ? 'var(--accent)' : 'var(--border)'}`,
+                    background: customDays.includes(day) ? 'var(--accent)' : 'var(--surface)',
+                    color: customDays.includes(day) ? '#fff' : 'var(--text2)',
+                    fontWeight: 800, fontSize:'0.8rem', cursor:'pointer',
+                  }}>
+                  {day}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="form-row">
           <div className="form-group" style={{marginBottom:0}}>
             <label className="form-label">Due Date</label>
             <input type="date" className="form-input" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
@@ -2066,7 +2199,195 @@ function UserSelectScreen({ users, onSelect }) {
 
 // ── Home View ─────────────────────────────────────────────
 
-function HomeView({ tasks, users, calendarEvents, rewards, settings, currentUser, onCompleteTask, onAddTask }) {
+
+// ── Dashboard Calendar Widget ─────────────────────────────
+// Shown on Home screen — no login required to VIEW
+function DashboardCalendar({ tasks, calendarEvents, users }) {
+  const [viewMode, setViewMode] = useState('day');
+  const today = new Date();
+  const [viewDate, setViewDate] = useState(today);
+
+  const getUser = id => users.find(u => u.user_id === id);
+  const dayStr = viewDate.toISOString().split('T')[0];
+  const todayStr2 = today.toISOString().split('T')[0];
+
+  // Week strip
+  const weekStart = new Date(viewDate);
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  const weekDays = Array.from({length:7}, (_,i) => {
+    const d = new Date(weekStart); d.setDate(d.getDate()+i); return d;
+  });
+
+  const dayTasks = tasks.filter(t => t.due_date === dayStr)
+    .sort((a,b) => (a.due_time||'').localeCompare(b.due_time||''));
+  const dayEvents = calendarEvents
+    .filter(e => new Date(e.start).toISOString().split('T')[0] === dayStr)
+    .sort((a,b) => new Date(a.start) - new Date(b.start));
+
+  // Merge tasks + events into a single timeline sorted by time
+  const timeline = [
+    ...dayEvents.map(e => ({ type:'event', data:e, sortKey: e.start })),
+    ...dayTasks.map(t => ({ type:'task', data:t, sortKey: t.due_date + 'T' + (t.due_time||'23:59') })),
+  ].sort((a,b) => a.sortKey.localeCompare(b.sortKey));
+
+  return (
+    <div className="card" style={{marginBottom:16, marginTop:16, padding:'14px 16px'}}>
+      {/* Header */}
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
+        <span style={{fontFamily:'var(--font-display)', fontSize:'1rem', fontWeight:700}}>📅 Schedule</span>
+        <div style={{display:'flex', gap:5}}>
+          <button className={`tab-pill ${viewMode==='day'?'active':''}`} style={{padding:'4px 12px', fontSize:'0.75rem'}}
+            onClick={() => setViewMode('day')}>Day</button>
+          <button className={`tab-pill ${viewMode==='week'?'active':''}`} style={{padding:'4px 12px', fontSize:'0.75rem'}}
+            onClick={() => setViewMode('week')}>Week</button>
+        </div>
+      </div>
+
+      {/* Week strip — always visible */}
+      <div style={{display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:3, marginBottom:12}}>
+        {weekDays.map(d => {
+          const ds = d.toISOString().split('T')[0];
+          const isSelected = ds === dayStr;
+          const isToday2 = ds === todayStr2;
+          const count = tasks.filter(t => t.due_date === ds).length;
+          return (
+            <div key={ds} onClick={() => { setViewDate(d); setViewMode('day'); }}
+              style={{textAlign:'center', padding:'6px 2px', borderRadius:10, cursor:'pointer',
+                background: isSelected ? 'var(--accent)' : isToday2 ? 'var(--accent-bg)' : 'var(--surface2)',
+                border: `1.5px solid ${isSelected ? 'var(--accent)' : isToday2 ? 'var(--accent)' : 'var(--border)'}`,
+                color: isSelected ? '#fff' : 'var(--text)',
+              }}>
+              <div style={{fontSize:'0.6rem', fontWeight:800, opacity:0.7, textTransform:'uppercase'}}>
+                {d.toLocaleDateString([],{weekday:'short'})}
+              </div>
+              <div style={{fontFamily:'var(--font-display)', fontSize:'1rem', fontWeight:900}}>{d.getDate()}</div>
+              {count > 0 && <div style={{width:5, height:5, borderRadius:'50%',
+                background: isSelected ? '#fff' : 'var(--accent)', margin:'2px auto 0'}} />}
+            </div>
+          );
+        })}
+      </div>
+
+      {viewMode === 'day' && (
+        <>
+          {/* Day nav */}
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10}}>
+            <button onClick={() => { const d=new Date(viewDate); d.setDate(d.getDate()-1); setViewDate(d); }}
+              style={{background:'none', border:'none', cursor:'pointer', fontSize:'1.1rem', color:'var(--text3)', padding:'2px 8px'}}>‹</button>
+            <div style={{textAlign:'center', fontSize:'0.85rem', fontWeight:700, color:'var(--text2)'}}>
+              {viewDate.toLocaleDateString([],{weekday:'long', month:'short', day:'numeric'})}
+              {dayStr === todayStr2 && <span style={{marginLeft:6, background:'var(--accent)', color:'#fff', borderRadius:99, padding:'1px 7px', fontSize:'0.7rem', fontWeight:800}}>Today</span>}
+            </div>
+            <button onClick={() => { const d=new Date(viewDate); d.setDate(d.getDate()+1); setViewDate(d); }}
+              style={{background:'none', border:'none', cursor:'pointer', fontSize:'1.1rem', color:'var(--text3)', padding:'2px 8px'}}>›</button>
+          </div>
+
+          {timeline.length === 0 && (
+            <div style={{textAlign:'center', padding:'20px 0', color:'var(--text3)', fontSize:'0.85rem'}}>
+              Nothing scheduled for this day 🎉
+            </div>
+          )}
+
+          {timeline.map((item, idx) => {
+            if (item.type === 'event') {
+              const ev = item.data;
+              return (
+                <div key={'ev-'+ev.id} style={{display:'flex', gap:10, alignItems:'flex-start',
+                  padding:'8px 0', borderBottom:'1px solid var(--border)'}}>
+                  <div style={{width:4, alignSelf:'stretch', background:ev.color||'var(--purple)', borderRadius:4, flexShrink:0}} />
+                  <div style={{minWidth:52, fontSize:'0.75rem', fontWeight:700, color:'var(--text3)', paddingTop:2}}>
+                    {formatTime(ev.start)}
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700, fontSize:'0.88rem'}}>{ev.title}</div>
+                    <div style={{fontSize:'0.75rem', color:'var(--text3)'}}>
+                      {formatTime(ev.start)} – {formatTime(ev.end)}
+                    </div>
+                  </div>
+                  <span style={{fontSize:'0.7rem', background:'var(--surface2)', padding:'2px 7px', borderRadius:99, color:'var(--text3)', fontWeight:700}}>Event</span>
+                </div>
+              );
+            } else {
+              const task = item.data;
+              const user = getUser(task.assigned_to);
+              const overdue = isOverdue(task);
+              return (
+                <div key={'t-'+task.task_id} style={{display:'flex', gap:10, alignItems:'flex-start',
+                  padding:'8px 0', borderBottom:'1px solid var(--border)',
+                  opacity: task.status === 'completed' ? 0.55 : 1}}>
+                  <div style={{width:4, alignSelf:'stretch',
+                    background: overdue ? '#DC2626' : task.status==='completed' ? 'var(--success)' : user?.color||'var(--accent)',
+                    borderRadius:4, flexShrink:0}} />
+                  <div style={{minWidth:52, fontSize:'0.75rem', fontWeight:700, color:'var(--text3)', paddingTop:2}}>
+                    {task.due_time ? formatTime(task.due_time) : '—'}
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700, fontSize:'0.88rem',
+                      textDecoration: task.status==='completed' ? 'line-through' : 'none'}}>
+                      {getCategoryIcon(task.category)} {task.title}
+                    </div>
+                    {user && <div style={{fontSize:'0.75rem', color:user.color, fontWeight:600}}>{user.avatar} {user.name}</div>}
+                  </div>
+                  <span style={{fontSize:'0.7rem',
+                    background: task.status==='completed' ? 'var(--success-bg)' : overdue ? 'var(--danger-bg)' : 'var(--warning-bg)',
+                    color: task.status==='completed' ? 'var(--success)' : overdue ? 'var(--danger)' : 'var(--warning)',
+                    padding:'2px 7px', borderRadius:99, fontWeight:700, whiteSpace:'nowrap'}}>
+                    {task.status==='completed' ? '✓ Done' : overdue ? '⚠️ Late' : task.priority}
+                  </span>
+                </div>
+              );
+            }
+          })}
+        </>
+      )}
+
+      {viewMode === 'week' && (
+        <div>
+          {weekDays.map(d => {
+            const ds = d.toISOString().split('T')[0];
+            const dTasks = tasks.filter(t => t.due_date === ds);
+            const dEvents = calendarEvents.filter(e => new Date(e.start).toISOString().split('T')[0] === ds);
+            if (dTasks.length === 0 && dEvents.length === 0) return null;
+            return (
+              <div key={ds} style={{marginBottom:10}}>
+                <div style={{fontSize:'0.72rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em',
+                  color: ds === todayStr2 ? 'var(--accent)' : 'var(--text3)', marginBottom:4}}>
+                  {d.toLocaleDateString([],{weekday:'short', month:'short', day:'numeric'})}
+                  {ds === todayStr2 && ' · Today'}
+                </div>
+                {dEvents.map(ev => (
+                  <div key={ev.id} style={{display:'flex', gap:8, padding:'5px 8px', background:'var(--surface2)',
+                    borderRadius:8, marginBottom:3, borderLeft:`3px solid ${ev.color||'var(--purple)'}`}}>
+                    <span style={{fontSize:'0.8rem', fontWeight:700, minWidth:50}}>{formatTime(ev.start)}</span>
+                    <span style={{fontSize:'0.8rem', fontWeight:600}}>{ev.title}</span>
+                  </div>
+                ))}
+                {dTasks.slice(0,4).map(t => {
+                  const u = getUser(t.assigned_to);
+                  return (
+                    <div key={t.task_id} style={{display:'flex', gap:8, padding:'5px 8px', background:'var(--surface2)',
+                      borderRadius:8, marginBottom:3, borderLeft:`3px solid ${u?.color||'var(--border)'}`,
+                      opacity: t.status==='completed' ? 0.5 : 1}}>
+                      <span style={{fontSize:'0.8rem', fontWeight:700, minWidth:50}}>{t.due_time ? formatTime(t.due_time) : '—'}</span>
+                      <span style={{fontSize:'0.8rem', fontWeight:600, flex:1,
+                        textDecoration: t.status==='completed' ? 'line-through' : 'none'}}>
+                        {getCategoryIcon(t.category)} {t.title}
+                      </span>
+                      {u && <span style={{fontSize:'0.75rem'}}>{u.avatar}</span>}
+                    </div>
+                  );
+                })}
+                {dTasks.length > 4 && <div style={{fontSize:'0.75rem', color:'var(--text3)', paddingLeft:8}}>+{dTasks.length-4} more</div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HomeView({ tasks, users, calendarEvents, rewards, settings, currentUser, onCompleteTask, onAddTask, isAdmin, onRequestLogin }) {
   const today = new Date().toISOString().split('T')[0];
 
   const todayTasks = tasks.filter(t => t.due_date === today);
@@ -2173,12 +2494,16 @@ function HomeView({ tasks, users, calendarEvents, rewards, settings, currentUser
         ))}
       </div>
 
+      {/* ─── Inline Calendar: Today + Week strip ─── */}
+      <DashboardCalendar tasks={tasks} calendarEvents={calendarEvents} users={users} />
+
       {/* Today's Tasks */}
       <div className="section-header">
         <span className="section-title">📋 Today's Tasks</span>
-        <button className="btn btn-primary" style={{padding:'8px 14px', fontSize:'0.85rem'}} onClick={onAddTask}>
-          + Add
-        </button>
+        {isAdmin
+          ? <button className="btn btn-primary" style={{padding:'8px 14px', fontSize:'0.85rem'}} onClick={onAddTask}>+ Add</button>
+          : <button className="btn btn-secondary" style={{padding:'8px 14px', fontSize:'0.85rem'}} onClick={onRequestLogin}>🔐 Sign in to add</button>
+        }
       </div>
 
       {overdueTasks.map(task => {
@@ -2186,7 +2511,7 @@ function HomeView({ tasks, users, calendarEvents, rewards, settings, currentUser
         return (
           <div key={task.task_id} className="task-card" style={{'--accent-left': '#DC2626'}}>
             <div style={{position:'absolute', left:0, top:0, bottom:0, width:4, background:'#DC2626', borderRadius:'16px 0 0 16px'}} />
-            <TaskCheckbox checked={false} onClick={() => onCompleteTask(task.task_id)} />
+            <TaskCheckbox checked={false} onClick={() => isAdmin ? onCompleteTask(task.task_id) : onRequestLogin()} />
             <div className="task-body">
               <div className="task-title">{task.title}</div>
               <div className="task-meta">
@@ -2205,7 +2530,7 @@ function HomeView({ tasks, users, calendarEvents, rewards, settings, currentUser
         return (
           <div key={task.task_id} className="task-card">
             <div style={{position:'absolute', left:0, top:0, bottom:0, width:4, background: user?.color || 'var(--accent)', borderRadius:'16px 0 0 16px'}} />
-            <TaskCheckbox checked={false} onClick={() => onCompleteTask(task.task_id)} color={user?.color} />
+            <TaskCheckbox checked={false} onClick={() => isAdmin ? onCompleteTask(task.task_id) : onRequestLogin()} color={user?.color} />
             <div className="task-body">
               <div className="task-title">{task.title}</div>
               <div className="task-meta">
@@ -2294,11 +2619,10 @@ function TasksView({ tasks, users, onComplete, onReopen, onAdd, onEdit, onDelete
     <div className="animate-slide-in">
       <div className="section-header" style={{marginTop:20}}>
         <h2 style={{margin:0}}>All Tasks</h2>
-        {isAdmin && (
-          <button className="btn btn-primary" style={{padding:'8px 16px', fontSize:'0.85rem'}} onClick={onAdd}>
-            + New Task
-          </button>
-        )}
+        <button className={`btn ${isAdmin ? 'btn-primary' : 'btn-secondary'}`} style={{padding:'8px 16px', fontSize:'0.85rem'}}
+          onClick={isAdmin ? onAdd : onAdd}>
+          {isAdmin ? '+ New Task' : '🔐 Sign in to add'}
+        </button>
       </div>
 
       {/* Filters */}
@@ -2540,8 +2864,9 @@ function CalendarView({ calendarEvents, tasks, users }) {
 
 // ── Routines View ──────────────────────────────────────────
 
-function RoutinesView({ routines, users }) {
+function RoutinesView({ routines, users, isAdmin }) {
   const getUser = id => users.find(u => u.user_id === id);
+  const [showGuide, setShowGuide] = useState(false);
 
   const routineGroups = [
     { name: 'Morning Routine', icon: '☀️', time: 'morning' },
@@ -2554,8 +2879,57 @@ function RoutinesView({ routines, users }) {
     <div className="animate-slide-in">
       <div className="section-header" style={{marginTop:20}}>
         <h2 style={{margin:0}}>🔁 Routines</h2>
+        <button className="btn btn-secondary" style={{padding:'6px 14px', fontSize:'0.82rem'}}
+          onClick={() => setShowGuide(s => !s)}>
+          {showGuide ? '✕ Close' : '❓ How to add'}
+        </button>
       </div>
-      <p style={{marginBottom:20, fontSize:'0.9rem'}}>Daily routines that auto-generate tasks each day.</p>
+      <p style={{marginBottom:12, fontSize:'0.9rem'}}>Daily routines that auto-generate tasks each day.</p>
+
+      {showGuide && (
+        <div style={{background:'var(--accent-bg)', border:'1.5px solid var(--accent)', borderRadius:'var(--radius)',
+          padding:'16px 18px', marginBottom:18}}>
+          <div style={{fontFamily:'var(--font-display)', fontSize:'1rem', fontWeight:700, marginBottom:10, color:'var(--accent)'}}>
+            📋 How to Add Tasks to a Routine
+          </div>
+          <div style={{fontSize:'0.85rem', color:'var(--text)', lineHeight:1.7}}>
+            <p style={{marginBottom:8}}>Routines are stored in the <strong>Routines</strong> tab of your Google Sheet.
+            Each row is one task in a routine. Here's how to add one:</p>
+
+            <div style={{background:'var(--surface)', borderRadius:10, padding:'12px 14px', marginBottom:10,
+              fontFamily:'monospace', fontSize:'0.78rem', overflowX:'auto', whiteSpace:'nowrap'}}>
+              <div style={{color:'var(--text3)', marginBottom:4}}>Routines sheet — add a new row:</div>
+              <div><strong>routine_id</strong> → r10 <em>(unique, e.g. r + number)</em></div>
+              <div><strong>routine_name</strong> → Morning Routine <em>(or: After School, Evening Routine, Bedtime Routine)</em></div>
+              <div><strong>assigned_to</strong> → u3 <em>(user_id from Users tab)</em></div>
+              <div><strong>task_title</strong> → Brush Teeth</div>
+              <div><strong>day_of_week</strong> → Daily <em>(or: Weekdays, Weekly, Mon, Tue…)</em></div>
+              <div><strong>time</strong> → 07:30</div>
+              <div><strong>active</strong> → TRUE</div>
+            </div>
+
+            <div style={{marginBottom:6}}><strong>🏷️ Routine names must match exactly:</strong></div>
+            <div style={{display:'flex', flexWrap:'wrap', gap:6, marginBottom:10}}>
+              {['Morning Routine','After School','Evening Routine','Bedtime Routine'].map(n => (
+                <span key={n} style={{background:'var(--surface)', border:'1.5px solid var(--border)',
+                  borderRadius:99, padding:'3px 10px', fontSize:'0.78rem', fontWeight:700}}>{n}</span>
+              ))}
+            </div>
+
+            <div style={{marginBottom:6}}><strong>📅 Day of week options:</strong></div>
+            <div style={{display:'flex', flexWrap:'wrap', gap:5, marginBottom:10}}>
+              {['Daily','Weekdays','Weekly','Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => (
+                <span key={d} style={{background:'var(--surface)', border:'1.5px solid var(--border)',
+                  borderRadius:99, padding:'3px 10px', fontSize:'0.75rem', fontWeight:700}}>{d}</span>
+              ))}
+            </div>
+
+            <div style={{background:'var(--warning-bg)', borderRadius:8, padding:'8px 12px', color:'var(--warning)', fontSize:'0.8rem', fontWeight:700}}>
+              💡 Tip: After adding rows to the Sheet, refresh the app to see your new routines appear here.
+            </div>
+          </div>
+        </div>
+      )}
 
       {routineGroups.map(group => {
         const items = routines.filter(r => r.routine_name === group.name);
@@ -2863,6 +3237,88 @@ function KidModeView({ currentUser, tasks, onComplete }) {
 // Home Hub Task Tracker — Root App Component
 // ============================================================
 
+
+// ── Side Panel User Card ──────────────────────────────────
+// Handles PIN entry inline within the side panel for parent users
+function SidePanelUserCard({ user, isActive, onSelect }) {
+  const [showPin, setShowPin] = useState(false);
+  const [pin, setPin] = useState('');
+  const [shake, setShake] = useState(false);
+
+  function handleClick() {
+    if (user.role === 'parent') { setShowPin(true); setPin(''); }
+    else onSelect(user);
+  }
+
+  function pressKey(k) {
+    if (pin.length >= 4) return;
+    const next = pin + k;
+    setPin(next);
+    if (next.length === 4) {
+      setTimeout(() => {
+        const correct = (user.pin && user.pin.trim()) ? user.pin.trim() : CONFIG.ADMIN_PIN;
+        if (next === correct) { onSelect(user); }
+        else { setShake(true); setTimeout(() => { setPin(''); setShake(false); }, 500); }
+      }, 150);
+    }
+  }
+
+  if (showPin) return (
+    <div style={{background:'var(--surface2)', borderRadius:'var(--radius)', border:'1.5px solid var(--accent)', padding:'16px', marginBottom:10}}>
+      <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:12}}>
+        <div style={{width:36, height:36, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center',
+          fontSize:18, border:`2px solid ${user.color}`, background:user.color+'20', color:user.color}}>{user.avatar}</div>
+        <div>
+          <div style={{fontWeight:800, fontSize:'0.9rem'}}>{user.name}</div>
+          <div style={{fontSize:'0.75rem', color:'var(--text3)'}}>Enter PIN to continue</div>
+        </div>
+        <button onClick={() => setShowPin(false)}
+          style={{marginLeft:'auto', background:'none', border:'none', cursor:'pointer', color:'var(--text3)', fontSize:16}}>✕</button>
+      </div>
+      <div style={{display:'flex', gap:8, justifyContent:'center', marginBottom:12}} className={shake ? 'animate-bounce' : ''}>
+        {[0,1,2,3].map(i => (
+          <div key={i} style={{width:14, height:14, borderRadius:'50%',
+            border:`2px solid ${shake ? 'var(--danger)' : 'var(--border)'}`,
+            background: i < pin.length ? (shake ? 'var(--danger)' : user.color) : 'transparent'}} />
+        ))}
+      </div>
+      <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:6}}>
+        {[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map((k, i) => (
+          <button key={i} onClick={() => k === '⌫' ? setPin(p => p.slice(0,-1)) : k !== '' ? pressKey(String(k)) : null}
+            style={{
+              padding:'10px', borderRadius:10,
+              border:`1.5px solid ${k === '' ? 'transparent' : 'var(--border)'}`,
+              background: k === '' ? 'transparent' : 'var(--surface)',
+              fontSize:'1.1rem', fontWeight:800, cursor: k === '' ? 'default' : 'pointer',
+              color:'var(--text)',
+            }}>{k}</button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div onClick={handleClick}
+      style={{display:'flex', alignItems:'center', gap:12, padding:'12px 14px',
+        borderRadius:'var(--radius)', border:`1.5px solid ${isActive ? user.color : 'var(--border)'}`,
+        background: isActive ? user.color+'15' : 'var(--surface)',
+        cursor:'pointer', marginBottom:8, transition:'all .15s',
+      }}>
+      <div style={{width:40, height:40, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center',
+        fontSize:20, border:`2px solid ${user.color}`, background:user.color+'20'}}>{user.avatar}</div>
+      <div style={{flex:1}}>
+        <div style={{fontWeight:800, fontSize:'0.95rem'}}>{user.name}</div>
+        <div style={{fontSize:'0.75rem', color:'var(--text3)', fontWeight:600}}>
+          {user.role === 'parent' ? '👑 Parent · 🔐 PIN' : '⭐ Child'}
+          {isActive ? ' · Active' : ''}
+        </div>
+      </div>
+      {isActive && <div style={{width:8, height:8, borderRadius:'50%', background:user.color}} />}
+      {user.role === 'parent' && !isActive && <span style={{fontSize:14, opacity:0.5}}>🔐</span>}
+    </div>
+  );
+}
+
 function App() {
   // ── State ────────────────────────────────────────────────
   const [users, setUsers] = useState([]);
@@ -2875,7 +3331,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [currentUser, setCurrentUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [showUserSelect, setShowUserSelect] = useState(true);
+  const [showUserSelect, setShowUserSelect] = useState(false); // start on dashboard, no forced login
   const [showPinScreen, setShowPinScreen] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
@@ -3049,9 +3505,8 @@ function App() {
     );
   }
 
-  if (showUserSelect) {
-    return <UserSelectScreen users={users} onSelect={handleSelectUser} />;
-  }
+  // showUserSelect now shows as a SIDE PANEL, not a full-page block
+  // (handled below inside the main render)
 
   if (showPinScreen) {
     // Pass the current user's sheet PIN so the in-app lock button uses the same PIN as login
@@ -3124,18 +3579,24 @@ function App() {
         </div>
 
         <div className="top-bar-actions">
-          {currentUser && (
-            <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}}
-              onClick={() => setShowUserSelect(true)}>
+          {/* User / login pill */}
+          {currentUser ? (
+            <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer',
+              background:'var(--surface2)', borderRadius:99, padding:'4px 10px', border:'1.5px solid var(--border)'}}
+              onClick={() => setShowUserSelect(s => !s)}>
               <MemberAvatar user={currentUser} size="sm" />
+              <span style={{fontSize:'0.8rem', fontWeight:800}}>{currentUser.name}</span>
+              {isAdmin && <span style={{background:'var(--accent)', color:'#fff', borderRadius:99, padding:'1px 7px', fontSize:'0.7rem', fontWeight:800}}>Admin</span>}
             </div>
+          ) : (
+            <button style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer',
+              background:'var(--accent)', color:'#fff', borderRadius:99, padding:'6px 14px',
+              border:'none', fontSize:'0.82rem', fontWeight:800}}
+              onClick={() => setShowUserSelect(s => !s)}>
+              👤 Sign In
+            </button>
           )}
-          {isAdmin && (
-            <div style={{background:'var(--accent-bg)', color:'var(--accent)', padding:'4px 10px', borderRadius:99, fontSize:'0.75rem', fontWeight:800}}>
-              👑 Admin
-            </div>
-          )}
-          {!isAdmin && (
+          {currentUser && !isAdmin && (
             <button className="icon-btn" title="Parent Mode" onClick={() => setShowPinScreen(true)}>🔐</button>
           )}
           <button className="icon-btn" title="Toggle Dark Mode" onClick={() => setIsDark(d => !d)}>
@@ -3151,13 +3612,15 @@ function App() {
             tasks={tasks} users={users} calendarEvents={calendarEvents}
             rewards={rewards} settings={settings} currentUser={currentUser}
             onCompleteTask={handleCompleteTask} onAddTask={handleAddTask}
+            isAdmin={isAdmin} onRequestLogin={() => setShowUserSelect(true)}
           />
         )}
         {activeTab === 'tasks' && (
           <TasksView
             tasks={tasks} users={users}
             onComplete={handleCompleteTask} onReopen={handleReopenTask}
-            onAdd={handleAddTask} onEdit={handleEditTask} onDelete={handleDeleteTask}
+            onAdd={isAdmin ? handleAddTask : () => setShowUserSelect(true)}
+            onEdit={handleEditTask} onDelete={handleDeleteTask}
             isAdmin={isAdmin}
           />
         )}
@@ -3165,7 +3628,7 @@ function App() {
           <CalendarView calendarEvents={calendarEvents} tasks={tasks} users={users} />
         )}
         {activeTab === 'routines' && (
-          <RoutinesView routines={routines} users={users} />
+          <RoutinesView routines={routines} users={users} isAdmin={isAdmin} />
         )}
         {activeTab === 'rewards' && (
           <RewardsView rewards={rewards} users={users} tasks={tasks} />
@@ -3183,6 +3646,52 @@ function App() {
       {/* Floating Add Button (admin only on tasks/home) */}
       {isAdmin && (activeTab === 'tasks' || activeTab === 'home') && (
         <button className="fab" onClick={handleAddTask} title="Add Task">+</button>
+      )}
+
+      {/* Side Panel — User Login (slides in from right) */}
+      {showUserSelect && (
+        <>
+          <div onClick={() => setShowUserSelect(false)}
+            style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:300, backdropFilter:'blur(3px)'}} />
+          <div style={{
+            position:'fixed', top:0, right:0, bottom:0,
+            width: 'min(320px, 90vw)',
+            background:'var(--surface)',
+            zIndex:301,
+            boxShadow:'-8px 0 32px rgba(0,0,0,0.15)',
+            display:'flex', flexDirection:'column',
+            animation:'slideInRight 0.25s ease',
+            overflowY:'auto',
+          }}>
+            <div style={{padding:'20px 20px 12px', borderBottom:'1.5px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+              <div style={{fontFamily:'var(--font-display)', fontSize:'1.2rem', fontWeight:900}}>
+                🏠 Who's here?
+              </div>
+              <button onClick={() => setShowUserSelect(false)}
+                style={{background:'var(--surface2)', border:'none', borderRadius:'50%', width:32, height:32, cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center'}}>✕</button>
+            </div>
+            <div style={{padding:'16px', flex:1}}>
+              {users.map(user => (
+                <SidePanelUserCard key={user.user_id}
+                  user={user}
+                  isActive={currentUser?.user_id === user.user_id}
+                  onSelect={(u) => { handleSelectUser(u); setShowUserSelect(false); }}
+                />
+              ))}
+              {currentUser && (
+                <button style={{width:'100%', marginTop:12, padding:'10px', borderRadius:'var(--radius-sm)',
+                  border:'1.5px solid var(--border)', background:'var(--surface2)',
+                  color:'var(--text2)', fontFamily:'var(--font)', fontWeight:800, fontSize:'0.85rem', cursor:'pointer'}}
+                  onClick={() => { setCurrentUser(null); setIsAdmin(false); setIsKidMode(false); setShowUserSelect(false); }}>
+                  🚪 Sign Out
+                </button>
+              )}
+            </div>
+            <div style={{padding:'14px 16px', borderTop:'1.5px solid var(--border)', fontSize:'0.75rem', color:'var(--text3)', fontWeight:600, textAlign:'center'}}>
+              🔐 Parent profiles require PIN
+            </div>
+          </div>
+        </>
       )}
 
       {/* Bottom Navigation */}
