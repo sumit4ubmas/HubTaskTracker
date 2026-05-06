@@ -664,7 +664,7 @@ p { color: var(--text2); }
   z-index: 600;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 32px;
+  gap: 24px;
   padding: 32px;
 }
 
@@ -1028,10 +1028,10 @@ const CONFIG = {
 
 const DEMO_DATA = {
   users: [
-    { user_id: 'u1', name: 'Mom', role: 'parent', color: '#7C3AED', avatar: '👩', active: true },
-    { user_id: 'u2', name: 'Dad', role: 'parent', color: '#2563EB', avatar: '👨', active: true },
-    { user_id: 'u3', name: 'Ava', role: 'child', color: '#DB2777', avatar: '👧', active: true },
-    { user_id: 'u4', name: 'Leo', role: 'child', color: '#059669', avatar: '👦', active: true },
+    { user_id: 'u1', name: 'Mom', role: 'parent', color: '#7C3AED', avatar: '👩', active: true, pin: '1234' },
+    { user_id: 'u2', name: 'Dad', role: 'parent', color: '#2563EB', avatar: '👨', active: true, pin: '5678' },
+    { user_id: 'u3', name: 'Ava', role: 'child', color: '#DB2777', avatar: '👧', active: true, pin: '' },
+    { user_id: 'u4', name: 'Leo', role: 'child', color: '#059669', avatar: '👦', active: true, pin: '' },
   ],
 
   tasks: [
@@ -1200,7 +1200,7 @@ const SheetsAPI = (() => {
 
   // Range definitions
   const RANGES = {
-    users:    'Users!A2:F',
+    users:    'Users!A2:G',
     tasks:    'Tasks!A2:N',
     routines: 'Routines!A2:H',
     rewards:  'Rewards!A2:E',
@@ -1209,7 +1209,7 @@ const SheetsAPI = (() => {
 
   // Column maps (0-indexed)
   const COLS = {
-    users:    ['user_id','name','role','color','avatar','active'],
+    users:    ['user_id','name','role','color','avatar','active','pin'],
     tasks:    ['task_id','title','description','assigned_to','category','priority','due_date','due_time','recurrence','status','reward_points','created_by','created_at','completed_at'],
     routines: ['routine_id','routine_name','assigned_to','task_title','day_of_week','time','active'],
     rewards:  ['reward_id','user_id','points','reason','date'],
@@ -1792,7 +1792,7 @@ function TaskFormModal({ users, editTask, onSave, onClose }) {
 
 // ── PIN Screen ────────────────────────────────────────────
 
-function PinScreen({ onSuccess, onCancel }) {
+function PinScreen({ onSuccess, onCancel, correctPin }) {
   const [pin, setPin] = useState('');
   const [shake, setShake] = useState(false);
 
@@ -1802,7 +1802,8 @@ function PinScreen({ onSuccess, onCancel }) {
     setPin(next);
     if (next.length === 4) {
       setTimeout(() => {
-        if (next === CONFIG.ADMIN_PIN) {
+        const pinToCheck = (correctPin && correctPin.trim() !== '') ? correctPin.trim() : CONFIG.ADMIN_PIN;
+        if (next === pinToCheck) {
           onSuccess();
         } else {
           setShake(true);
@@ -1841,6 +1842,100 @@ function PinScreen({ onSuccess, onCancel }) {
 // ── User Select Screen ─────────────────────────────────────
 
 function UserSelectScreen({ users, onSelect }) {
+  const [pendingUser, setPendingUser] = useState(null); // parent waiting for PIN
+  const [pin, setPin] = useState('');
+  const [shake, setShake] = useState(false);
+  const [wrongAttempts, setWrongAttempts] = useState(0);
+
+  function handleCardClick(user) {
+    if (user.role === 'parent') {
+      setPendingUser(user);
+      setPin('');
+    } else {
+      onSelect(user); // children go straight in
+    }
+  }
+
+  function pressKey(k) {
+    if (pin.length >= 4) return;
+    const next = pin + k;
+    setPin(next);
+    if (next.length === 4) {
+      setTimeout(() => {
+        // Use PIN from the user's sheet record if available, else fall back to global CONFIG.ADMIN_PIN
+        const correctPin = (pendingUser.pin && pendingUser.pin.trim() !== '')
+          ? pendingUser.pin.trim()
+          : CONFIG.ADMIN_PIN;
+        if (next === correctPin) {
+          onSelect(pendingUser);
+        } else {
+          setShake(true);
+          setWrongAttempts(w => w + 1);
+          setTimeout(() => { setPin(''); setShake(false); }, 500);
+        }
+      }, 150);
+    }
+  }
+
+  function backspace() { setPin(p => p.slice(0, -1)); }
+  function cancelPin() { setPendingUser(null); setPin(''); setWrongAttempts(0); }
+
+  // ── PIN overlay for parent ──
+  if (pendingUser) {
+    return (
+      <div className="user-select-screen">
+        {/* Back button */}
+        <button onClick={cancelPin} style={{
+          position:'absolute', top:20, left:20,
+          background:'none', border:'none', cursor:'pointer',
+          fontSize:'1rem', fontWeight:800, color:'var(--text3)',
+          display:'flex', alignItems:'center', gap:6
+        }}>← Back</button>
+
+        {/* Parent avatar */}
+        <div style={{
+          width:72, height:72, borderRadius:'50%',
+          border:`3px solid ${pendingUser.color}`,
+          background: pendingUser.color + '20',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          fontSize:36, marginBottom:8
+        }}>{pendingUser.avatar}</div>
+
+        <h2 style={{fontFamily:'var(--font-display)', fontSize:'1.6rem', fontWeight:900}}>
+          Hi, {pendingUser.name}!
+        </h2>
+        <p style={{color:'var(--text3)', fontWeight:600, marginBottom:4}}>
+          Enter your 4-digit PIN
+        </p>
+
+        {wrongAttempts > 0 && (
+          <p style={{color:'var(--danger)', fontSize:'0.82rem', fontWeight:700, marginBottom:0}}>
+            ❌ Wrong PIN — {wrongAttempts} failed attempt{wrongAttempts > 1 ? 's' : ''}
+          </p>
+        )}
+
+        {/* PIN dots */}
+        <div className="pin-dots" style={shake ? {animation:'bounce 0.3s ease'} : {}}>
+          {[0,1,2,3].map(i => (
+            <div key={i} className={`pin-dot ${i < pin.length ? 'filled' : ''}`}
+              style={shake ? {borderColor:'var(--danger)', background: i < pin.length ? 'var(--danger)' : ''} : {}} />
+          ))}
+        </div>
+
+        {/* Numpad */}
+        <div className="pin-grid">
+          {[1,2,3,4,5,6,7,8,9].map(n => (
+            <button key={n} className="pin-key" onClick={() => pressKey(String(n))}>{n}</button>
+          ))}
+          <button className="pin-key" onClick={cancelPin} style={{fontSize:'1rem', color:'var(--text3)'}}>✕</button>
+          <button className="pin-key" onClick={() => pressKey('0')}>0</button>
+          <button className="pin-key" onClick={backspace} style={{fontSize:'1rem'}}>⌫</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Normal user select ──
   return (
     <div className="user-select-screen">
       <div className="brand-icon" style={{width:64,height:64,fontSize:32}}>🏠</div>
@@ -1849,16 +1944,32 @@ function UserSelectScreen({ users, onSelect }) {
 
       <div className="user-grid">
         {users.map(user => (
-          <div key={user.user_id} className="user-card" onClick={() => onSelect(user)}
-            style={{ borderColor: user.color + '40' }}>
+          <div key={user.user_id} className="user-card" onClick={() => handleCardClick(user)}
+            style={{ borderColor: user.color + '40', position:'relative' }}>
+            {/* Lock badge for parents */}
+            {user.role === 'parent' && (
+              <div style={{
+                position:'absolute', top:10, right:10,
+                background:'var(--accent)', color:'#fff',
+                borderRadius:'50%', width:22, height:22,
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:11
+              }}>🔐</div>
+            )}
             <div className="user-card-avatar" style={{ color: user.color, borderColor: user.color, backgroundColor: user.color + '20' }}>
               {user.avatar}
             </div>
             <div className="user-card-name">{user.name}</div>
-            <div className="user-card-role">{user.role}</div>
+            <div className="user-card-role" style={{display:'flex', alignItems:'center', gap:4}}>
+              {user.role === 'parent' ? '👑 Parent' : '⭐ Child'}
+            </div>
           </div>
         ))}
       </div>
+
+      <p style={{color:'var(--text3)', fontSize:'0.78rem', fontWeight:600, marginTop:8}}>
+        🔐 Parent profiles require a PIN
+      </p>
     </div>
   );
 }
@@ -2832,7 +2943,9 @@ function App() {
   }
 
   if (showPinScreen) {
-    return <PinScreen onSuccess={handleAdminSuccess} onCancel={() => setShowPinScreen(false)} />;
+    // Pass the current user's sheet PIN so the in-app lock button uses the same PIN as login
+    const inAppPin = (currentUser?.pin && currentUser.pin.trim() !== '') ? currentUser.pin.trim() : CONFIG.ADMIN_PIN;
+    return <PinScreen onSuccess={handleAdminSuccess} onCancel={() => setShowPinScreen(false)} correctPin={inAppPin} />;
   }
 
   // Kid mode is a full separate view
