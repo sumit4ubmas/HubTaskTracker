@@ -2536,13 +2536,15 @@ function SettingsView({ settings, users, isDark, onToggleDark, isAdmin, onReques
 
       {!isAdmin && (
         <div className="settings-group">
-          <div className="settings-group-title">Admin</div>
-          <div className="settings-row" style={{cursor:'pointer'}} onClick={onRequestAdmin}>
-            <div>
-              <div className="settings-row-label">🔐 Enter Parent Mode</div>
-              <div className="settings-row-value">Manage tasks, users, and rewards</div>
-            </div>
-            <span style={{color:'var(--accent)', fontWeight:700}}>›</span>
+          <div className="settings-group-title">Admin Access</div>
+          <button
+            className="btn btn-primary btn-lg"
+            style={{width:'100%', fontSize:'1.05rem', marginBottom:6}}
+            onClick={onRequestAdmin}>
+            🔐 Enter Parent Mode
+          </button>
+          <div style={{fontSize:'0.8rem', color:'var(--text3)', textAlign:'center', paddingBottom:4}}>
+            Enter your 4-digit PIN to manage tasks, users and rewards
           </div>
         </div>
       )}
@@ -2705,14 +2707,8 @@ function App() {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
-  // Kid mode detection
-  useEffect(() => {
-    if (currentUser?.role === 'child' && !isAdmin) {
-      setIsKidMode(true);
-    } else {
-      setIsKidMode(false);
-    }
-  }, [currentUser, isAdmin]);
+  // Kid mode is now set directly in handleSelectUser and handleAdminSuccess
+  // so no useEffect needed here — removing avoids stale-state timing bugs.
 
   // ── Clock ─────────────────────────────────────────────────
   const [time, setTime] = useState(new Date());
@@ -2794,16 +2790,19 @@ function App() {
   }
 
   function handleSelectUser(user) {
+    const isParent = user.role === 'parent';
     setCurrentUser(user);
     setShowUserSelect(false);
-    if (user.role === 'parent') {
-      setIsAdmin(true);
-    }
+    setIsAdmin(isParent);      // always reset: true for parent, false for child
+    setIsKidMode(!isParent);   // always reset: kid mode only for children
+    setActiveTab('home');      // reset to home tab on every user switch
   }
 
   function handleAdminSuccess() {
     setIsAdmin(true);
+    setIsKidMode(false);
     setShowPinScreen(false);
+    setActiveTab('home');
     showToast('👑 Parent mode enabled!');
   }
 
@@ -2847,6 +2846,11 @@ function App() {
             <span style={{fontFamily:'var(--font-display)', fontSize:'1.2rem', fontWeight:900, color:'#fff'}}>{currentUser.name}'s Tasks</span>
           </div>
           <div style={{display:'flex', gap:8}}>
+            <button
+              style={{background:'rgba(255,255,255,0.25)', color:'#fff', border:'none', borderRadius:10, padding:'6px 12px', fontSize:'0.8rem', fontWeight:800, cursor:'pointer', display:'flex', alignItems:'center', gap:5}}
+              onClick={() => setShowPinScreen(true)} title="Parent Mode">
+              🔐 Parents
+            </button>
             <button className="icon-btn" style={{background:'rgba(255,255,255,0.25)', color:'#fff'}}
               onClick={() => setShowUserSelect(true)} title="Switch User">👤</button>
           </div>
