@@ -1183,6 +1183,95 @@ function tomorrowAt(time) {
   return d.toISOString();
 }
 
+
+// ============================================================
+// Shared OAuth Token Manager
+// One token, one popup, shared by both SheetsAPI and CalendarAPI.
+// The Google consent popup only appears once per session.
+// ============================================================
+const TokenManager = (() => {
+  let _token = null;
+  let _expiry = 0;
+  let _client = null;
+  let _pending = []; // queued {resolve, reject} waiting for token
+  let _initializing = false;
+
+  function isOAuthConfigured() {
+    return CONFIG.GOOGLE_CLIENT_ID &&
+      CONFIG.GOOGLE_CLIENT_ID !== 'YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com';
+  }
+
+  function initClient() {
+    if (_client || !window.google?.accounts?.oauth2) return false;
+    _client = google.accounts.oauth2.initTokenClient({
+      client_id: CONFIG.GOOGLE_CLIENT_ID,
+      // All scopes needed by both Sheets and Calendar — requested together once
+      scope: [
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/calendar.readonly',
+        'https://www.googleapis.com/auth/calendar.events',
+      ].join(' '),
+      callback: (resp) => {
+        _initializing = false;
+        if (resp.error) {
+          console.error('Home Hub OAuth error:', resp.error);
+          _pending.forEach(({ reject }) => reject(new Error(resp.error)));
+        } else {
+          _token = resp.access_token;
+          _expiry = Date.now() + ((resp.expires_in || 3600) - 60) * 1000;
+          console.info('Home Hub: OAuth token obtained, valid for', Math.round((resp.expires_in || 3600) / 60), 'minutes');
+          _pending.forEach(({ resolve }) => resolve(_token));
+        }
+        _pending = [];
+      },
+    });
+    return true;
+  }
+
+  // Returns a valid access token.
+  // Shows the Google consent popup only when necessary (first time or token expired).
+  // Subsequent calls within the session return the cached token immediately.
+  async function getToken() {
+    if (!isOAuthConfigured()) throw new Error('OAuth not configured');
+
+    // Return cached token if still valid
+    if (_token && Date.now() < _expiry) return _token;
+
+    // Wait for GIS to load (it loads async)
+    if (!window.google?.accounts?.oauth2) {
+      await new Promise(resolve => {
+        const check = setInterval(() => {
+          if (window.google?.accounts?.oauth2) { clearInterval(check); resolve(); }
+        }, 100);
+        setTimeout(() => { clearInterval(check); resolve(); }, 5000);
+      });
+    }
+
+    if (!initClient()) throw new Error('Google Identity Services failed to load');
+
+    // If a token request is already in flight, join the queue
+    if (_initializing) {
+      return new Promise((resolve, reject) => _pending.push({ resolve, reject }));
+    }
+
+    // Request new token — shows popup only if not previously authorized this session
+    _initializing = true;
+    return new Promise((resolve, reject) => {
+      _pending.push({ resolve, reject });
+      // prompt:'consent' on first call, empty string on refresh (silent)
+      _client.requestAccessToken({ prompt: _token ? '' : 'consent' });
+    });
+  }
+
+  // Call this from the "Connect" button to eagerly authorize
+  async function authorize() { return getToken(); }
+
+  // Clear token (e.g. on sign-out)
+  function clear() { _token = null; _expiry = 0; }
+
+  return { getToken, authorize, clear, isOAuthConfigured };
+})();
+
 // ============================================================
 // Home Hub — Google Sheets API Layer
 // ============================================================
@@ -1270,20 +1359,8 @@ const SheetsAPI = (() => {
   }
 
   async function getAccessToken() {
-    // Reuse CalendarAPI's GIS token (same OAuth flow, same scopes cover Sheets too)
-    // Add Sheets scope when requesting token
-    if (!window.google?.accounts?.oauth2) throw new Error('Google Identity Services not loaded');
-    return new Promise((resolve, reject) => {
-      const client = google.accounts.oauth2.initTokenClient({
-        client_id: CONFIG.GOOGLE_CLIENT_ID,
-        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
-        callback: (resp) => {
-          if (resp.error) reject(new Error(resp.error));
-          else resolve(resp.access_token);
-        },
-      });
-      client.requestAccessToken({ prompt: '' });
-    });
+    // Use the shared TokenManager — no popup if token is already cached
+    return TokenManager.getToken();
   }
 
   // ── Public API ──────────────────────────────────────────
@@ -1425,12 +1502,6 @@ const SheetsAPI = (() => {
 
 const CalendarAPI = (() => {
 
-  // ── Token state ────────────────────────────────────────
-  let _accessToken = null;
-  let _tokenExpiry = 0;
-  let _tokenClient = null;
-  let _tokenResolvers = []; // queue of {resolve, reject} waiting for a token
-
   function isConfigured() {
     return !CONFIG.DEMO_MODE &&
       CONFIG.CALENDAR_ID &&
@@ -1441,45 +1512,9 @@ const CalendarAPI = (() => {
       CONFIG.GOOGLE_API_KEY !== 'YOUR_GOOGLE_API_KEY';
   }
 
-  // Initialize the GIS token client (called once on first use)
-  function initTokenClient() {
-    if (_tokenClient) return;
-    if (!window.google?.accounts?.oauth2) {
-      console.warn('Home Hub: Google Identity Services not loaded yet.');
-      return;
-    }
-    _tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CONFIG.GOOGLE_CLIENT_ID,
-      scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
-      callback: (tokenResponse) => {
-        if (tokenResponse.error) {
-          _tokenResolvers.forEach(({ reject }) => reject(new Error(tokenResponse.error)));
-        } else {
-          _accessToken = tokenResponse.access_token;
-          _tokenExpiry = Date.now() + (tokenResponse.expires_in - 60) * 1000;
-          _tokenResolvers.forEach(({ resolve }) => resolve(_accessToken));
-        }
-        _tokenResolvers = [];
-      },
-    });
-  }
-
-  // Get a valid access token — shows Google consent popup if needed
+  // Delegate entirely to the shared TokenManager — no duplicate token logic
   async function getAccessToken() {
-    initTokenClient();
-    if (!_tokenClient) throw new Error('Google Identity Services not available');
-    // Return cached token if still valid
-    if (_accessToken && Date.now() < _tokenExpiry) return _accessToken;
-    // Request a new token (shows popup if not already authorized)
-    return new Promise((resolve, reject) => {
-      _tokenResolvers.push({ resolve, reject });
-      try {
-        _tokenClient.requestAccessToken({ prompt: _accessToken ? '' : 'consent' });
-      } catch (e) {
-        _tokenResolvers = _tokenResolvers.filter(r => r.resolve !== resolve);
-        reject(e);
-      }
-    });
+    return TokenManager.getToken();
   }
 
   async function getEventsForRange(startISO, endISO) {
@@ -2699,7 +2734,7 @@ function SettingsView({ settings, users, isDark, onToggleDark, isAdmin, onReques
             <button className="btn btn-primary" style={{padding:'6px 14px', fontSize:'0.8rem', whiteSpace:'nowrap'}}
               onClick={async () => {
                 try {
-                  await CalendarAPI.getAccessToken();
+                  await TokenManager.authorize();
                   const evs = await CalendarAPI.getTodayEvents();
                   setCalendarEvents(evs);
                   showToast('📅 Calendar connected!');
